@@ -11,6 +11,7 @@ const views = Object.keys(viewMeta);
 let state = null;
 let currentView = 'overview';
 let isDemoMode = false;
+const demoStorageKey = 'openAdvisorPagesState';
 
 function el(id) {
   return document.getElementById(id);
@@ -97,6 +98,504 @@ function setView(view) {
   renderNav();
 }
 
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function makeId(prefix) {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function addDays(value, days) {
+  const date = new Date(value || Date.now());
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+}
+
+function sortByDate(items, key) {
+  return [...items].sort((a, b) => new Date(a[key] || 0) - new Date(b[key] || 0));
+}
+
+function sortByDateDesc(items, key) {
+  return [...items].sort((a, b) => new Date(b[key] || 0) - new Date(a[key] || 0));
+}
+
+function getMap(items) {
+  return new Map((items || []).map((item) => [item.id, item]));
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function priorityRank(priority) {
+  return { critical: 0, high: 1, normal: 2, low: 3 }[priority] ?? 4;
+}
+
+function decorateEvent(baseState, event) {
+  const assetMap = getMap(baseState.assets || []);
+  const themeMap = getMap(baseState.themes || []);
+  const adapterMap = getMap(baseState.sourceAdapters || []);
+  const reportMap = getMap(baseState.researchReports || []);
+  const enrichment = (baseState.eventEnrichments || [])
+    .filter((item) => item.eventId === event.id)
+    .sort((a, b) => new Date(b.freshnessAt || 0) - new Date(a.freshnessAt || 0))[0];
+
+  return {
+    ...event,
+    asset: event.assetId ? assetMap.get(event.assetId) || null : null,
+    theme: event.themeId ? themeMap.get(event.themeId) || null : null,
+    sourceAdapter: event.sourceAdapterId ? adapterMap.get(event.sourceAdapterId) || null : null,
+    enrichment: enrichment
+      ? {
+          ...enrichment,
+          report: enrichment.reportId ? reportMap.get(enrichment.reportId) || null : null
+        }
+      : null
+  };
+}
+
+function buildPortfolioSummary(baseState) {
+  const trackedAssetIds = unique([
+    ...(baseState.holdings || []).map((holding) => holding.assetId),
+    ...(baseState.watchlists || []).flatMap((watchlist) => watchlist.itemAssetIds || []),
+    ...(baseState.themes || []).flatMap((theme) => theme.assetIds || [])
+  ]);
+
+  const estimatedBasis = (baseState.holdings || []).reduce((total, holding) => {
+    const basis = holding.costBasis != null ? Number(holding.costBasis) : 0;
+    const quantity = holding.quantity != null ? Number(holding.quantity) : 0;
+    return total + basis * quantity;
+  }, 0);
+
+  return {
+    holdingsCount: (baseState.holdings || []).length,
+    watchlistsCount: (baseState.watchlists || []).length,
+    activeThemesCount: (baseState.themes || []).filter((theme) => theme.status === 'active').length,
+    trackedAssetsCount: trackedAssetIds.length,
+    canonicalEventsCount: (baseState.canonicalEvents || []).length,
+    openRemindersCount: (baseState.reminders || []).filter((reminder) => reminder.state === 'open').length,
+    estimatedCostBasis: estimatedBasis
+  };
+}
+
+function buildInbox(baseState) {
+  const decoratedEvents = new Map((baseState.canonicalEvents || []).map((event) => [event.id, decorateEvent(baseState, event)]));
+
+  return [...(baseState.inboxItems || [])]
+    .map((item) => ({
+      ...item,
+      event: decoratedEvents.get(item.eventId) || null
+    }))
+    .sort((a, b) => {
+      const priorityDiff = priorityRank(a.priority) - priorityRank(b.priority);
+      if (priorityDiff !== 0) return priorityDiff;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+}
+
+function buildDigest(baseState) {
+  const inbox = buildInbox(baseState).filter((item) => item.state !== 'archived');
+  const topItems = inbox.slice(0, 5);
+  const openReminders = sortByDate((baseState.reminders || []).filter((item) => item.state === 'open'), 'dueAt').slice(0, 5);
+  const recentResearch = sortByDateDesc(baseState.researchJobs || [], 'createdAt')
+    .slice(0, 3)
+    .map((job) => ({
+      ...job,
+      report: (baseState.researchReports || []).find((report) => report.jobId === job.id) || null
+    }));
+
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    title: 'What happened, why it matters, and what to check next.',
+    summary: `${topItems.length} inbox items, ${openReminders.length} open reminders, and ${recentResearch.length} recent research passes across ${(baseState.themes || []).filter((theme) => theme.status === 'active').length} active themes.`,
+    topItems: topItems.map((item) => ({
+      id: item.id,
+      priority: item.priority,
+      title: item.event?.title || 'Untitled event',
+      factualSummary: item.event?.factualSummary || '',
+      whyItMatters: item.event?.enrichment?.summary || item.reason,
+      sourceTier: item.event?.sourceTier || 'tier_4',
+      confidence: item.event?.enrichment?.confidence ?? null,
+      freshnessAt: item.event?.enrichment?.freshnessAt || item.event?.recordedAt || null,
+      nextStep: item.nextStep,
+      relatedAsset: item.event?.asset || null,
+      relatedTheme: item.event?.theme || null
+    })),
+    openReminders,
+    researchSuggestions: (baseState.themes || [])
+      .filter((theme) => theme.status === 'active')
+      .slice(0, 3)
+      .map((theme) => ({
+        themeId: theme.id,
+        prompt: `Research ${theme.title} for new confirming or disconfirming signals.`
+      })),
+    recentResearch: recentResearch.map((job) => ({
+      id: job.id,
+      question: job.question,
+      status: job.status,
+      reportSummary: job.report ? job.report.summary : null
+    }))
+  };
+}
+
+function buildCalendar(baseState) {
+  return sortByDate(baseState.canonicalEvents || [], 'scheduledFor').map((event) => decorateEvent(baseState, event));
+}
+
+function buildResearchWorkspace(baseState) {
+  const sourcesByReportId = new Map();
+  for (const source of baseState.researchSources || []) {
+    const list = sourcesByReportId.get(source.reportId) || [];
+    list.push(source);
+    sourcesByReportId.set(source.reportId, list);
+  }
+
+  const claimsByReportId = new Map();
+  for (const claim of baseState.researchClaims || []) {
+    const list = claimsByReportId.get(claim.reportId) || [];
+    list.push(claim);
+    claimsByReportId.set(claim.reportId, list);
+  }
+
+  return sortByDateDesc(baseState.researchJobs || [], 'createdAt').map((job) => {
+    const report = (baseState.researchReports || []).find((item) => item.jobId === job.id) || null;
+    return {
+      ...job,
+      report: report
+        ? {
+            ...report,
+            sources: sourcesByReportId.get(report.id) || [],
+            claims: claimsByReportId.get(report.id) || []
+          }
+        : null
+    };
+  });
+}
+
+function buildSourceHealth(baseState) {
+  return sortByDateDesc(baseState.sourceAdapters || [], 'lastSyncedAt');
+}
+
+function buildAuditTrail(baseState) {
+  return sortByDateDesc(baseState.auditLog || [], 'createdAt').slice(0, 20);
+}
+
+function deriveClientState(baseState) {
+  const next = clone(baseState);
+  next.theses = next.themes;
+  next.alerts = next.reminders;
+  next.catalysts = next.canonicalEvents;
+  next.researchRuns = next.researchReports;
+  next.portfolioSummary = buildPortfolioSummary(next);
+  next.inbox = buildInbox(next);
+  next.digest = buildDigest(next);
+  next.calendar = buildCalendar(next);
+  next.researchWorkspace = buildResearchWorkspace(next);
+  next.sourceHealth = buildSourceHealth(next);
+  next.auditTrail = buildAuditTrail(next);
+  return next;
+}
+
+function loadStoredDemoState() {
+  const raw = localStorage.getItem(demoStorageKey);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function saveDemoState(nextState) {
+  localStorage.setItem(demoStorageKey, JSON.stringify(nextState));
+}
+
+function logAudit(rawState, action, entityType, entityId, summary) {
+  rawState.auditLog = rawState.auditLog || [];
+  rawState.auditLog.unshift({
+    id: makeId('audit'),
+    action,
+    entityType,
+    entityId,
+    summary,
+    createdAt: nowIso()
+  });
+}
+
+function removeById(collection, id) {
+  const index = collection.findIndex((item) => item.id === id);
+  if (index >= 0) collection.splice(index, 1);
+}
+
+function ensureDemoAsset(rawState, input) {
+  if (input.assetId) {
+    const existing = (rawState.assets || []).find((asset) => asset.id === input.assetId);
+    if (existing) return existing;
+  }
+  if (input.symbol) {
+    const existing = (rawState.assets || []).find((asset) => asset.symbol && asset.symbol.toLowerCase() === String(input.symbol).toLowerCase());
+    if (existing) return existing;
+  }
+  const asset = {
+    id: makeId('asset'),
+    symbol: input.symbol || null,
+    name: input.name || input.symbol || 'Unnamed Asset',
+    assetType: input.assetType || 'equity'
+  };
+  rawState.assets.push(asset);
+  return asset;
+}
+
+function createDemoResearch(rawState, body) {
+  const createdAt = nowIso();
+  const job = {
+    id: makeId('research_job'),
+    status: 'completed',
+    mode: body.mode || (body.triggerType === 'urgent_alert' ? 'fast_enrichment_only' : 'full_research_mode'),
+    triggerType: body.triggerType || 'user_request',
+    targetType: body.targetType || 'custom',
+    targetId: body.targetId || null,
+    relatedEventId: body.relatedEventId || null,
+    question: body.question || 'Untitled research question',
+    createdAt,
+    completedAt: createdAt
+  };
+  rawState.researchJobs.unshift(job);
+
+  const report = {
+    id: makeId('research_report'),
+    jobId: job.id,
+    relatedEventId: body.relatedEventId || null,
+    title: body.reportTitle || body.question || 'Research report',
+    summary: body.summary || `This is a placeholder enrichment for: ${body.question || 'custom research question'}.`,
+    nextCheck: body.nextCheck || 'Review once a fresh source or event arrives.',
+    confidence: body.confidence != null ? Number(body.confidence) : 0.42,
+    freshnessAt: createdAt,
+    expiresAt: addDays(createdAt, 3),
+    inferenceProvider: 'demo_stub',
+    createdAt
+  };
+  rawState.researchReports.unshift(report);
+
+  const source = {
+    id: makeId('research_source'),
+    reportId: report.id,
+    title: body.sourceTitle || 'Demo source',
+    url: body.sourceUrl || null,
+    publisher: body.publisher || 'Demo source',
+    tier: body.sourceTier || 'tier_3',
+    publishedAt: createdAt
+  };
+  rawState.researchSources.unshift(source);
+
+  rawState.researchClaims.unshift({
+    id: makeId('research_claim'),
+    reportId: report.id,
+    claim: body.claim || report.summary,
+    confidence: report.confidence,
+    supportedBySourceIds: [source.id]
+  });
+
+  if (body.relatedEventId) {
+    rawState.eventEnrichments.unshift({
+      id: makeId('enrichment'),
+      eventId: body.relatedEventId,
+      reportId: report.id,
+      summary: report.summary,
+      confidence: report.confidence,
+      freshnessAt: report.freshnessAt,
+      expiresAt: report.expiresAt
+    });
+  }
+
+  logAudit(rawState, 'research_job_created', 'research_job', job.id, `Queued research job: ${job.question}`);
+}
+
+function cleanupDemoResource(rawState, resource, id) {
+  if (resource === 'themes') {
+    rawState.canonicalEvents = rawState.canonicalEvents.map((event) => (event.themeId === id ? { ...event, themeId: null } : event));
+    rawState.inboxItems = rawState.inboxItems.filter((item) => item.event?.themeId !== id);
+  }
+  if (resource === 'events') {
+    rawState.inboxItems = rawState.inboxItems.filter((item) => item.eventId !== id);
+    rawState.reminders = rawState.reminders.filter((reminder) => !(reminder.relatedType === 'event' && reminder.relatedId === id));
+    const reportIds = rawState.eventEnrichments.filter((entry) => entry.eventId === id).map((entry) => entry.reportId);
+    rawState.eventEnrichments = rawState.eventEnrichments.filter((entry) => entry.eventId !== id);
+    rawState.researchReports = rawState.researchReports.filter((report) => !reportIds.includes(report.id));
+    rawState.researchSources = rawState.researchSources.filter((source) => !reportIds.includes(source.reportId));
+    rawState.researchClaims = rawState.researchClaims.filter((claim) => !reportIds.includes(claim.reportId));
+    rawState.researchJobs = rawState.researchJobs.filter((job) => job.relatedEventId !== id);
+  }
+  if (resource === 'research-jobs') {
+    const reportIds = rawState.researchReports.filter((report) => report.jobId === id).map((report) => report.id);
+    rawState.researchReports = rawState.researchReports.filter((report) => report.jobId !== id);
+    rawState.researchSources = rawState.researchSources.filter((source) => !reportIds.includes(source.reportId));
+    rawState.researchClaims = rawState.researchClaims.filter((claim) => !reportIds.includes(claim.reportId));
+    rawState.eventEnrichments = rawState.eventEnrichments.filter((entry) => !reportIds.includes(entry.reportId));
+  }
+}
+
+async function demoMutate(path, body = {}, method = 'POST') {
+  let rawState = clone(loadStoredDemoState() || state);
+
+  if (path === '/v1/reset') {
+    localStorage.removeItem(demoStorageKey);
+    const response = await fetch('./demo-bootstrap.json');
+    rawState = await response.json();
+    saveDemoState(rawState);
+    return deriveClientState(rawState);
+  }
+
+  if (path === '/v1/holdings' && method === 'POST') {
+    const asset = ensureDemoAsset(rawState, body);
+    const holding = {
+      id: makeId('holding'),
+      assetId: asset.id,
+      quantity: Number(body.quantity || 0),
+      costBasis: body.costBasis != null && body.costBasis !== '' ? Number(body.costBasis) : null,
+      sourceType: body.sourceType || 'manual'
+    };
+    rawState.holdings.push(holding);
+    logAudit(rawState, 'holding_created', 'holding', holding.id, `Added holding for ${asset.symbol || asset.name}.`);
+  } else if (path === '/v1/watchlists' && method === 'POST') {
+    const watchlist = {
+      id: makeId('watchlist'),
+      name: body.name || 'Untitled Watchlist',
+      description: body.description || '',
+      itemAssetIds: []
+    };
+    for (const item of body.items || []) {
+      const asset = ensureDemoAsset(rawState, item);
+      if (!watchlist.itemAssetIds.includes(asset.id)) watchlist.itemAssetIds.push(asset.id);
+    }
+    rawState.watchlists.push(watchlist);
+    logAudit(rawState, 'watchlist_created', 'watchlist', watchlist.id, `Created watchlist ${watchlist.name}.`);
+  } else if ((path === '/v1/themes' || path === '/v1/theses') && method === 'POST') {
+    const theme = {
+      id: makeId('theme'),
+      title: body.title || 'Untitled Theme',
+      status: body.status || 'active',
+      summary: body.summary || '',
+      hypothesis: body.hypothesis || body.rationale || '',
+      monitoringPlan: body.monitoringPlan || body.notes || '',
+      assetIds: []
+    };
+    for (const item of body.assets || []) {
+      const asset = ensureDemoAsset(rawState, item);
+      if (!theme.assetIds.includes(asset.id)) theme.assetIds.push(asset.id);
+    }
+    rawState.themes.push(theme);
+    logAudit(rawState, 'theme_created', 'theme', theme.id, `Created theme ${theme.title}.`);
+  } else if ((path === '/v1/events' || path === '/v1/canonical-events' || path === '/v1/catalysts') && method === 'POST') {
+    const asset = body.assetId || body.symbol || body.name ? ensureDemoAsset(rawState, body) : null;
+    const event = {
+      id: makeId('event'),
+      eventType: body.eventType || body.type || 'custom',
+      title: body.title || 'Untitled Event',
+      factualSummary: body.factualSummary || body.reason || '',
+      recordedAt: body.recordedAt || nowIso(),
+      scheduledFor: body.scheduledFor || nowIso(),
+      assetId: asset ? asset.id : body.assetId || null,
+      themeId: body.themeId || body.thesisId || null,
+      sourceAdapterId: body.sourceAdapterId || null,
+      sourceLabel: body.sourceLabel || 'Manual entry',
+      sourceTier: body.sourceTier || 'tier_2',
+      importance: body.importance || 'normal',
+      truthStatus: body.truthStatus || 'confirmed'
+    };
+    rawState.canonicalEvents.push(event);
+    rawState.inboxItems.unshift({
+      id: makeId('inbox'),
+      eventId: event.id,
+      state: 'new',
+      priority: body.priority || (event.importance === 'critical' ? 'critical' : event.importance === 'high' ? 'high' : 'normal'),
+      reason: body.reason || event.factualSummary,
+      nextStep: body.nextStep || 'Decide whether this needs research or a reminder.',
+      createdAt: nowIso(),
+      deliveryKind: 'in_app'
+    });
+    logAudit(rawState, 'event_created', 'event', event.id, `Recorded canonical event ${event.title}.`);
+  } else if ((path === '/v1/reminders' || path === '/v1/alerts') && method === 'POST') {
+    const reminder = {
+      id: makeId('reminder'),
+      title: body.title || 'Untitled Reminder',
+      state: body.state || 'open',
+      dueAt: body.dueAt || body.scheduledFor || nowIso(),
+      relatedType: body.relatedType || 'event',
+      relatedId: body.relatedId || body.eventId || null,
+      note: body.note || body.message || ''
+    };
+    rawState.reminders.push(reminder);
+    logAudit(rawState, 'reminder_created', 'reminder', reminder.id, `Created reminder ${reminder.title}.`);
+  } else if ((path === '/v1/research-jobs' || path === '/v1/research-runs') && method === 'POST') {
+    createDemoResearch(rawState, body);
+  } else if (path === '/v1/notes' && method === 'POST') {
+    const note = {
+      id: makeId('note'),
+      targetType: body.targetType || 'theme',
+      targetId: body.targetId || null,
+      body: body.body || '',
+      createdAt: nowIso()
+    };
+    rawState.notes.unshift(note);
+    logAudit(rawState, 'note_created', 'note', note.id, `Added note on ${note.targetType}.`);
+  } else if (path.match(/^\/v1\/inbox-items\/[^/]+\/seen$/) && method === 'POST') {
+    const id = path.split('/')[3];
+    const item = rawState.inboxItems.find((entry) => entry.id === id);
+    if (item) item.state = 'seen';
+  } else if (path.match(/^\/v1\/inbox-items\/[^/]+\/archive$/) && method === 'POST') {
+    const id = path.split('/')[3];
+    const item = rawState.inboxItems.find((entry) => entry.id === id);
+    if (item) item.state = 'archived';
+  } else if (path.match(/^\/v1\/reminders\/[^/]+\/done$/) && method === 'POST') {
+    const id = path.split('/')[3];
+    const reminder = rawState.reminders.find((entry) => entry.id === id);
+    if (reminder) reminder.state = 'done';
+  } else if (path.match(/^\/v1\/reminders\/[^/]+\/snooze$/) && method === 'POST') {
+    const id = path.split('/')[3];
+    const reminder = rawState.reminders.find((entry) => entry.id === id);
+    if (reminder) {
+      reminder.state = 'snoozed';
+      reminder.dueAt = body.dueAt || addDays(nowIso(), 1);
+    }
+  } else if (path.match(/^\/v1\/alerts\/[^/]+\/seen$/) && method === 'POST') {
+    const id = path.split('/')[3];
+    const reminder = rawState.reminders.find((entry) => entry.id === id);
+    if (reminder) reminder.state = 'done';
+  } else if (path.match(/^\/v1\/alerts\/[^/]+\/snooze$/) && method === 'POST') {
+    const id = path.split('/')[3];
+    const reminder = rawState.reminders.find((entry) => entry.id === id);
+    if (reminder) {
+      reminder.state = 'snoozed';
+      reminder.dueAt = body.snoozedUntil || addDays(nowIso(), 1);
+    }
+  } else if (method === 'DELETE') {
+    const match = path.match(/^\/v1\/(holdings|watchlists|themes|events|canonical-events|catalysts|reminders|alerts|research-jobs|research-runs|notes)\/([^/]+)$/);
+    if (match) {
+      const [, resource, id] = match;
+      const keyMap = {
+        holdings: 'holdings',
+        watchlists: 'watchlists',
+        themes: 'themes',
+        events: 'canonicalEvents',
+        'canonical-events': 'canonicalEvents',
+        catalysts: 'canonicalEvents',
+        reminders: 'reminders',
+        alerts: 'reminders',
+        'research-jobs': 'researchJobs',
+        'research-runs': 'researchJobs',
+        notes: 'notes'
+      };
+      removeById(rawState[keyMap[resource]], id);
+      cleanupDemoResource(rawState, resource, id);
+      logAudit(rawState, 'resource_deleted', resource, id, `Deleted ${resource} ${id}.`);
+    }
+  }
+
+  saveDemoState(rawState);
+  return deriveClientState(rawState);
+}
+
 async function jsonFetch(path, options = {}) {
   const response = await fetch(`${apiBase}${path}`, options);
   const payload = await response.json();
@@ -107,6 +606,7 @@ async function jsonFetch(path, options = {}) {
 }
 
 async function post(path, body) {
+  if (isDemoMode) return demoMutate(path, body, 'POST');
   return jsonFetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -115,6 +615,7 @@ async function post(path, body) {
 }
 
 async function del(path) {
+  if (isDemoMode) return demoMutate(path, {}, 'DELETE');
   return jsonFetch(path, { method: 'DELETE' });
 }
 
@@ -760,9 +1261,18 @@ async function refreshState() {
     state = await jsonFetch('/v1/bootstrap');
     isDemoMode = false;
   } catch (error) {
+    const stored = loadStoredDemoState();
+    if (stored) {
+      state = deriveClientState(stored);
+      isDemoMode = true;
+      renderAll();
+      return;
+    }
     const response = await fetch('./demo-bootstrap.json');
     if (!response.ok) throw error;
-    state = await response.json();
+    const rawDemoState = await response.json();
+    saveDemoState(rawDemoState);
+    state = deriveClientState(rawDemoState);
     isDemoMode = true;
   }
   renderAll();

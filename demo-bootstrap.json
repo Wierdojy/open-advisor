@@ -102,6 +102,15 @@
         "asset_vrt",
         "asset_xlu"
       ]
+    },
+    {
+      "id": "theme_ddusmwb3",
+      "title": "Power grid follow-up",
+      "status": "active",
+      "summary": "Track grid constraints after AI capex.",
+      "hypothesis": "",
+      "monitoringPlan": "",
+      "assetIds": []
     }
   ],
   "canonicalEvents": [
@@ -274,6 +283,14 @@
   ],
   "auditLog": [
     {
+      "id": "audit_n4wo50tc",
+      "action": "theme_created",
+      "entityType": "theme",
+      "entityId": "theme_ddusmwb3",
+      "summary": "Created theme Power grid follow-up.",
+      "createdAt": "2026-05-20T22:56:48.707Z"
+    },
+    {
       "id": "audit_1",
       "action": "seed_loaded",
       "entityType": "system",
@@ -295,6 +312,15 @@
         "asset_vrt",
         "asset_xlu"
       ]
+    },
+    {
+      "id": "theme_ddusmwb3",
+      "title": "Power grid follow-up",
+      "status": "active",
+      "summary": "Track grid constraints after AI capex.",
+      "hypothesis": "",
+      "monitoringPlan": "",
+      "assetIds": []
     }
   ],
   "alerts": [
@@ -358,7 +384,7 @@
   "portfolioSummary": {
     "holdingsCount": 2,
     "watchlistsCount": 1,
-    "activeThemesCount": 1,
+    "activeThemesCount": 2,
     "trackedAssetsCount": 4,
     "canonicalEventsCount": 2,
     "openRemindersCount": 1,
@@ -496,7 +522,7 @@
   "digest": {
     "date": "2026-05-20",
     "title": "What happened, why it matters, and what to check next.",
-    "summary": "2 inbox items, 1 open reminders, and 1 recent research passes across 1 active themes.",
+    "summary": "2 inbox items, 1 open reminders, and 1 recent research passes across 2 active themes.",
     "topItems": [
       {
         "id": "inbox_1",
@@ -574,6 +600,10 @@
       {
         "themeId": "theme_1",
         "prompt": "Research AI power infrastructure for new confirming or disconfirming signals."
+      },
+      {
+        "themeId": "theme_ddusmwb3",
+        "prompt": "Research Power grid follow-up for new confirming or disconfirming signals."
       }
     ],
     "recentResearch": [
@@ -780,6 +810,14 @@
     }
   ],
   "auditTrail": [
+    {
+      "id": "audit_n4wo50tc",
+      "action": "theme_created",
+      "entityType": "theme",
+      "entityId": "theme_ddusmwb3",
+      "summary": "Created theme Power grid follow-up.",
+      "createdAt": "2026-05-20T22:56:48.707Z"
+    },
     {
       "id": "audit_1",
       "action": "seed_loaded",
