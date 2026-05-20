@@ -14,9 +14,12 @@ async function json(url, options) {
 
 async function main() {
   const port = 3101;
-  const child = spawn('node', ['services/api/server.js'], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PORT: String(port) } });
-  child.stdout.on('data', (d) => process.stdout.write(d));
-  child.stderr.on('data', (d) => process.stderr.write(d));
+  const child = spawn('node', ['services/api/server.js'], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, PORT: String(port) }
+  });
+  child.stdout.on('data', (chunk) => process.stdout.write(chunk));
+  child.stderr.on('data', (chunk) => process.stderr.write(chunk));
 
   try {
     await wait(500);
@@ -24,6 +27,7 @@ async function main() {
 
     const before = await json(`http://localhost:${port}/v1/bootstrap`);
     assert.equal(before.holdings.length, 2);
+    assert.equal(before.themes.length, 1);
 
     const afterHolding = await json(`http://localhost:${port}/v1/holdings`, {
       method: 'POST',
@@ -32,28 +36,72 @@ async function main() {
     });
     assert.equal(afterHolding.holdings.length, 3);
 
-    const afterThesis = await json(`http://localhost:${port}/v1/theses`, {
+    const afterTheme = await json(`http://localhost:${port}/v1/themes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Grid modernization', summary: 'Utilities and grid upgrades', assets: [{ symbol: 'XLU', name: 'Utilities Select Sector SPDR Fund' }] })
+      body: JSON.stringify({
+        title: 'Grid modernization',
+        summary: 'Utilities and grid upgrades',
+        assets: [{ symbol: 'XLU', name: 'Utilities Select Sector SPDR Fund' }]
+      })
     });
-    assert.ok(afterThesis.theses.some((t) => t.title === 'Grid modernization'));
+    assert.ok(afterTheme.themes.some((theme) => theme.title === 'Grid modernization'));
 
-    const afterCatalyst = await json(`http://localhost:${port}/v1/catalysts`, {
+    const gridTheme = afterTheme.themes.find((theme) => theme.title === 'Grid modernization');
+    const afterEvent = await json(`http://localhost:${port}/v1/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'TSM capex update', symbol: 'TSM', type: 'news', scheduledFor: new Date().toISOString(), whyItMatters: 'Potential read-through for semiconductor supply chain', createAlert: true })
+      body: JSON.stringify({
+        title: 'TSM capex update',
+        symbol: 'TSM',
+        eventType: 'news',
+        scheduledFor: new Date().toISOString(),
+        factualSummary: 'TSM discussed capex pacing on a management update.',
+        reason: 'Potential read-through for semiconductor supply chain capacity and AI buildout.',
+        themeId: gridTheme.id
+      })
     });
-    assert.ok(afterCatalyst.catalysts.some((c) => c.title === 'TSM capex update'));
-    assert.ok(afterCatalyst.alerts.some((a) => a.title.includes('TSM capex update')));
+    assert.ok(afterEvent.canonicalEvents.some((event) => event.title === 'TSM capex update'));
+    assert.ok(afterEvent.inbox.some((item) => item.event?.title === 'TSM capex update'));
 
-    const thesis = afterCatalyst.theses.find((t) => t.title === 'Grid modernization') || afterCatalyst.theses[0];
+    const createdEvent = afterEvent.canonicalEvents.find((event) => event.title === 'TSM capex update');
+    const afterReminder = await json(`http://localhost:${port}/v1/reminders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Revisit TSM capex update',
+        relatedType: 'event',
+        relatedId: createdEvent.id,
+        dueAt: new Date().toISOString()
+      })
+    });
+    assert.ok(afterReminder.reminders.some((reminder) => reminder.title === 'Revisit TSM capex update'));
+
+    const afterResearch = await json(`http://localhost:${port}/v1/research-jobs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        triggerType: 'user_request',
+        targetType: 'theme',
+        targetId: gridTheme.id,
+        relatedEventId: createdEvent.id,
+        question: 'Why does the TSM capex update matter to grid modernization?'
+      })
+    });
+    assert.ok(afterResearch.researchJobs.some((job) => job.question.includes('TSM capex update')));
+    assert.ok(afterResearch.researchReports.some((report) => report.relatedEventId === createdEvent.id));
+    assert.ok(afterResearch.eventEnrichments.some((item) => item.eventId === createdEvent.id));
+
     const afterNote = await json(`http://localhost:${port}/v1/notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetType: 'thesis', targetId: thesis.id, body: 'Need to track utility capex confirmation.' })
+      body: JSON.stringify({
+        targetType: 'theme',
+        targetId: gridTheme.id,
+        body: 'Need to track utility capex confirmation.'
+      })
     });
-    assert.ok(afterNote.notes.some((n) => n.body.includes('utility capex')));
+    assert.ok(afterNote.notes.some((note) => note.body.includes('utility capex')));
 
     console.log('Open Advisor API integration test passed');
   } finally {
