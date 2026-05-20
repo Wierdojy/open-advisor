@@ -16,6 +16,11 @@ let currentView = 'overview';
 let isDemoMode = false;
 const demoStorageKey = 'openAdvisorPagesState';
 
+function demoBootstrapUrl() {
+  const buildVersion = window.OPEN_ADVISOR_BUILD;
+  return buildVersion ? `./demo-bootstrap.json?v=${buildVersion}` : './demo-bootstrap.json';
+}
+
 function el(id) {
   return document.getElementById(id);
 }
@@ -443,7 +448,7 @@ async function demoMutate(path, body = {}, method = 'POST') {
 
   if (path === '/v1/reset') {
     localStorage.removeItem(demoStorageKey);
-    const response = await fetch('./demo-bootstrap.json');
+    const response = await fetch(demoBootstrapUrl());
     rawState = await response.json();
     saveDemoState(rawState);
     return deriveClientState(rawState);
@@ -1280,7 +1285,7 @@ async function refreshState() {
       renderAll();
       return;
     }
-    const response = await fetch('./demo-bootstrap.json');
+    const response = await fetch(demoBootstrapUrl());
     if (!response.ok) throw error;
     const rawDemoState = await response.json();
     saveDemoState(rawDemoState);
