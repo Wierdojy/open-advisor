@@ -1,4 +1,7 @@
-const apiBase = `${window.location.protocol}//${window.location.hostname}:3001`;
+const localApiHosts = new Set(['localhost', '127.0.0.1', '::1']);
+const apiBase = localApiHosts.has(window.location.hostname)
+  ? `${window.location.protocol}//${window.location.hostname}:3001`
+  : null;
 const viewMeta = {
   overview: { code: '00', label: 'Overview' },
   portfolio: { code: '01', label: 'Portfolio' },
@@ -597,12 +600,21 @@ async function demoMutate(path, body = {}, method = 'POST') {
 }
 
 async function jsonFetch(path, options = {}) {
-  const response = await fetch(`${apiBase}${path}`, options);
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.error || `Request failed: ${response.status}`);
+  if (!apiBase) {
+    throw new Error('Local API unavailable');
   }
-  return payload;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 1500);
+  try {
+    const response = await fetch(`${apiBase}${path}`, { ...options, signal: controller.signal });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || `Request failed: ${response.status}`);
+    }
+    return payload;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 async function post(path, body) {
