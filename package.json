@@ -1,0 +1,18 @@
+{
+  "name": "open-advisor",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Open Advisor - thesis-driven market copilot",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "dev:web": "node apps/web/server.js",
+    "dev:api": "node services/api/server.js",
+    "reset": "node scripts/reset-data.js",
+    "test": "node scripts/smoke-test.js && node scripts/api-test.js"
+  }
+}

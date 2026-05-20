@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Open Advisor</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="site-header__inner">
+          <div>
+            <div class="brand-mark">Open Advisor</div>
+            <div class="brand-subtitle">Thesis-driven market copilot</div>
+          </div>
+          <nav class="site-nav">
+            <a href="#overview">Overview</a>
+            <a href="#workspace">Workspace</a>
+            <a href="#flows">Flows</a>
+          </nav>
+        </div>
+      </header>
+
+      <main class="site-main">
+        <section class="marketing-hero" id="overview">
+          <div class="marketing-copy">
+            <div class="eyebrow">Calm market operating system</div>
+            <h1>Track what you own.<br />Track what you believe.</h1>
+            <p class="lead" id="digest-summary">Loading today’s market brief…</p>
+            <div class="hero-actions">
+              <button data-view="research">Run research sweep</button>
+              <button data-view="calendar" class="secondary">View catalysts</button>
+            </div>
+          </div>
+          <div class="hero-panel card">
+            <div class="section-title">At a glance</div>
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat__label">Holdings</div>
+                <div class="hero-stat__value" id="stat-holdings">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat__label">Active theses</div>
+                <div class="hero-stat__value" id="stat-theses">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat__label">Upcoming catalysts</div>
+                <div class="hero-stat__value" id="stat-catalysts">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat__label">Pending alerts</div>
+                <div class="hero-stat__value" id="stat-alerts">—</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="story-grid" id="flows">
+          <div class="story-card card">
+            <div class="section-title">Portfolio + watchlists</div>
+            <h3>Connect exposure and curiosity</h3>
+            <p>Track current holdings and keep adjacent names close without turning the product into another trading dashboard.</p>
+          </div>
+          <div class="story-card card">
+            <div class="section-title">Theses</div>
+            <h3>Make beliefs first-class</h3>
+            <p>Link assets to themes, trends, and working views so every catalyst has context instead of noise.</p>
+          </div>
+          <div class="story-card card">
+            <div class="section-title">Digest + research</div>
+            <h3>Stay calm, then go deeper</h3>
+            <p>See what changed, why it matters, and launch a targeted research sweep only when something deserves attention.</p>
+          </div>
+        </section>
+
+        <section class="workspace-shell" id="workspace">
+          <div class="workspace-sidebar">
+            <div class="workspace-sidebar__header">
+              <div class="brand">Advisor Workspace</div>
+              <div class="tag">Integrated MVP</div>
+            </div>
+            <nav id="nav" class="workspace-nav"></nav>
+            <div class="sidebar-actions">
+              <button id="reset-data" class="secondary small">Reset demo data</button>
+            </div>
+          </div>
+
+          <div class="workspace-main">
+            <header class="workspace-header card">
+              <div>
+                <div class="eyebrow">Live workspace</div>
+                <h2>Website shell + product core</h2>
+                <p class="workspace-sub">This is the current integrated MVP experience: digest, portfolio, theses, catalysts, alerts, and research in one place.</p>
+              </div>
+              <div class="workspace-quick-actions">
+                <button data-view="portfolio" class="secondary">Open portfolio</button>
+                <button data-view="theses" class="secondary">Open theses</button>
+              </div>
+            </header>
+
+            <section id="view-home" class="view active-view"></section>
+            <section id="view-portfolio" class="view"></section>
+            <section id="view-theses" class="view"></section>
+            <section id="view-calendar" class="view"></section>
+            <section id="view-research" class="view"></section>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>
