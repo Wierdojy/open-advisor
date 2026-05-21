@@ -171,20 +171,42 @@ function buildAuditTrail(state) {
   return sortByDateDesc(state.auditLog || [], 'createdAt').slice(0, 20);
 }
 
-function buildBootstrap(state) {
+function normalizeState(state) {
   return {
     ...state,
-    theses: state.themes,
-    alerts: state.reminders,
-    catalysts: state.canonicalEvents,
-    researchRuns: state.researchReports,
-    portfolioSummary: buildPortfolioSummary(state),
-    inbox: buildInbox(state),
-    digest: buildDigest(state),
-    calendar: buildCalendar(state),
-    researchWorkspace: buildResearchWorkspace(state),
-    sourceHealth: buildSourceHealth(state),
-    auditTrail: buildAuditTrail(state)
+    assets: state.assets || [],
+    holdings: state.holdings || [],
+    watchlists: state.watchlists || [],
+    themes: state.themes || state.theses || [],
+    reminders: state.reminders || state.alerts || [],
+    canonicalEvents: state.canonicalEvents || state.catalysts || [],
+    researchReports: state.researchReports || state.researchRuns || [],
+    researchJobs: state.researchJobs || [],
+    inboxItems: state.inboxItems || [],
+    notes: state.notes || [],
+    sourceAdapters: state.sourceAdapters || [],
+    eventEnrichments: state.eventEnrichments || [],
+    researchSources: state.researchSources || [],
+    researchClaims: state.researchClaims || [],
+    auditLog: state.auditLog || []
+  };
+}
+
+function buildBootstrap(state) {
+  const normalized = normalizeState(state);
+  return {
+    ...normalized,
+    theses: normalized.themes,
+    alerts: normalized.reminders,
+    catalysts: normalized.canonicalEvents,
+    researchRuns: normalized.researchReports,
+    portfolioSummary: buildPortfolioSummary(normalized),
+    inbox: buildInbox(normalized),
+    digest: buildDigest(normalized),
+    calendar: buildCalendar(normalized),
+    researchWorkspace: buildResearchWorkspace(normalized),
+    sourceHealth: buildSourceHealth(normalized),
+    auditTrail: buildAuditTrail(normalized)
   };
 }
 
