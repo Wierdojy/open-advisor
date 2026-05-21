@@ -3,7 +3,7 @@ const apiBase = localApiHosts.has(window.location.hostname)
   ? `${window.location.protocol}//${window.location.hostname}:3001`
   : null;
 const viewMeta = {
-  overview: { code: '00', label: 'Advisor', icon: 'insights' },
+  overview: { code: '00', label: 'Digest', icon: 'insights' },
   portfolio: { code: '01', label: 'Portfolio', icon: 'account_balance_wallet' },
   themes: { code: '02', label: 'Themes', icon: 'grid_view' },
   events: { code: '03', label: 'Follow-up', icon: 'event_available' },
@@ -87,7 +87,6 @@ function renderNav() {
       const meta = viewMeta[view];
       return `
         <button class="nav-item ${currentView === view ? 'active' : ''}" data-view="${view}" aria-label="${meta.label}">
-            <span class="material-symbols-outlined">${meta.icon}</span>
             <span class="nav-code">${meta.code}</span>
             <span class="nav-label">${meta.label}</span>
         </button>
@@ -221,7 +220,7 @@ function buildDigest(baseState) {
   return {
     date: new Date().toISOString().slice(0, 10),
     title: 'What happened, why it matters, and what to check next.',
-    summary: `${topItems.length} inbox items, ${openReminders.length} open reminders, and ${recentResearch.length} recent research passes across ${(baseState.themes || []).filter((theme) => theme.status === 'active').length} active themes.`,
+    summary: `${topItems.length} digest items, ${openReminders.length} open reminders, and ${recentResearch.length} recent research passes across ${(baseState.themes || []).filter((theme) => theme.status === 'active').length} active themes.`,
     topItems: topItems.map((item) => ({
       id: item.id,
       priority: item.priority,
@@ -694,73 +693,83 @@ function overviewCards() {
 }
 
 
-const crystalPillarImage = 'https://lh3.googleusercontent.com/aida/ADBb0ugAj3dKaHY2M7k6HITf2pOWYrEP4Lh_PGk-GjZP_bV39sVk7V1GQk0KVgBEDK477m-JKvcGbJCUxamqFf7b-_DbmDUSOvJqAzAYmG8kZOT8bTLomLlm7tJ7FlW8vL5kR6ZiZTi3872kJRiDJFG8kQbDXIu6tB1y8tI46JRnYDzGF-0lJH7Km7blfnWtijw9EULZ-4BLSuozEnYwFhv5K3JGDY_g_IpzaGIstFiOd7dGkwMMQwgGyFdxSi9s';
-const crystalShardImage = 'https://lh3.googleusercontent.com/aida/ADBb0ugVmpTjZPfRmXRjsI-T5DmtWaAkLR7oOnmyp7_p8SzvQV26J_rdKoZ9yE-pyZZSNCWiUzpX5w_cYnyV7G_tq34ZxuMnvJrelXLgU18uxZmepei9voNv9COrHJwXMrN7vmKOobUlorr30oJiZtVyAIui3wkoaKO6UcD-ZwyCqB5rKDSQLJEAiVvDSmlKTXE8rN3OFvmop4ji5Q_mRDoP14nYIckteEKqK_OX00IgM_WPTxuPEJJHPvzmiHYd';
-
-function renderScreenHero(view) {
-  const activeInbox = state.inbox.filter((item) => item.state !== 'archived').length;
-  const hero = {
+function viewSummary(view) {
+  const activeDigestItems = state.inbox.filter((item) => item.state !== 'archived').length;
+  const summaries = {
     overview: {
-      source: 'Advisor Inbox (Ethereal) - Exact Header Match',
-      eyebrow: 'STRATEGIC DIALOGUE',
-      title: 'Unlock a wealth of <span class="accent">strategic possibilities.</span>',
+      eyebrow: 'Today',
+      title: 'What matters now',
       copy: state.digest.summary,
-      image: crystalPillarImage,
-      extra: `
-        <div class="advisor-thread hero-search">
-          <div class="message-bubble-in">
-            <p class="item-text">Analysis found ${activeInbox} advisor signals and ${state.portfolioSummary.openRemindersCount} open follow-ups. Review the proposed sequence?</p>
-            <div class="meta">ADVISOR-01 • LIVE</div>
-          </div>
-        </div>`
+      stats: [
+        ['Digest items', activeDigestItems],
+        ['Open reminders', state.portfolioSummary.openRemindersCount],
+        ['Recent research', state.digest.recentResearch.length]
+      ]
     },
     portfolio: {
-      source: 'Portfolio (Consolidated)',
-      eyebrow: 'NET ACCOUNT VALUE',
-      title: `<span class="iridescent-text">${formatCurrency(state.portfolioSummary.estimatedCostBasis)}</span>`,
+      eyebrow: 'Portfolio',
+      title: 'Holdings and watchlists',
       copy: `${state.portfolioSummary.trackedAssetsCount} tracked assets across ${state.portfolioSummary.holdingsCount} holdings and ${state.portfolioSummary.watchlistsCount} watchlists.`,
-      image: crystalShardImage,
-      extra: `<div class="chart-bars hero-search" aria-hidden="true"><span style="height:42%"></span><span style="height:52%"></span><span style="height:66%"></span><span class="active" style="height:88%"></span><span style="height:74%"></span><span style="height:96%"></span></div>`
+      stats: [
+        ['Cost basis', formatCurrency(state.portfolioSummary.estimatedCostBasis)],
+        ['Holdings', state.portfolioSummary.holdingsCount],
+        ['Watchlists', state.portfolioSummary.watchlistsCount]
+      ]
     },
     themes: {
-      source: 'Onboarding (Ethereal) - Layered Overlap',
-      eyebrow: 'BELIEF ARCHITECTURE',
-      title: 'Intelligence in <span class="accent">Clarity</span>',
-      copy: `${state.themes.filter((theme) => theme.status === 'active').length} active themes are being monitored through translucent data architecture.`,
-      image: crystalPillarImage,
-      extra: `<div class="hero-search"><button class="button theme-research" data-id="${state.themes[0]?.id || ''}" data-title="${state.themes[0]?.title || 'active themes'}">RESEARCH ACTIVE THEME</button></div>`
+      eyebrow: 'Themes',
+      title: 'Investment theses',
+      copy: `${state.themes.filter((theme) => theme.status === 'active').length} active themes with hypotheses, monitoring plans, linked assets, and notes.`,
+      stats: [
+        ['Themes', state.themes.length],
+        ['Active', state.themes.filter((theme) => theme.status === 'active').length],
+        ['Notes', (state.notes || []).filter((note) => note.targetType === 'theme').length]
+      ]
     },
     events: {
-      source: 'Advisor Follow-up Mobile',
-      eyebrow: 'DETERMINISTIC TRUTH',
-      title: 'Every fact becomes a <span class="accent">follow-up surface.</span>',
-      copy: `${state.calendar.length} canonical events and ${state.reminders.length} reminders are arranged for review.`,
-      image: crystalPillarImage,
-      extra: `<div class="hero-search"><button class="button" data-view="events">RECORD FACT</button></div>`
+      eyebrow: 'Events',
+      title: 'Facts and follow-up',
+      copy: `${state.calendar.length} canonical events and ${state.reminders.length} reminders are available for review.`,
+      stats: [
+        ['Events', state.calendar.length],
+        ['Reminders', state.reminders.length],
+        ['Open', state.portfolioSummary.openRemindersCount]
+      ]
     },
     research: {
-      source: 'Research (Ethereal) - Enhanced Analysis',
-      eyebrow: 'INTELLIGENT EXPLORATION',
-      title: 'Discover the pulse of the <span class="accent">digital economy.</span>',
-      copy: `${state.researchWorkspace.length} research jobs and ${state.researchReports.length} reports are available for synthesis.`,
-      image: crystalShardImage,
-      extra: `
-        <div class="hero-search search-shell">
-          <span class="material-symbols-outlined">search</span>
-          <input aria-label="Research query" placeholder="Explore assets, trends, or protocols..." />
-          <span class="material-symbols-outlined">tune</span>
-        </div>`
+      eyebrow: 'Research',
+      title: 'Research jobs and reports',
+      copy: `${state.researchWorkspace.length} research jobs with ${state.researchReports.length} attached reports. Research is demo-backed until providers are connected.`,
+      stats: [
+        ['Jobs', state.researchWorkspace.length],
+        ['Reports', state.researchReports.length],
+        ['Suggestions', state.digest.researchSuggestions.length]
+      ]
     }
-  }[view];
+  };
+  return summaries[view];
+}
 
+function renderViewHeader(view) {
+  const summary = viewSummary(view);
   return `
-    <section class="screen-hero" data-source-screen="${hero.source}">
-      <div class="hero-visual"><img src="${hero.image}" alt="" /></div>
-      <div class="hero-copy">
-        <span class="eyebrow">${hero.eyebrow}</span>
-        <h2 class="hero-title">${hero.title}</h2>
-        <p class="hero-summary">${hero.copy}</p>
-        ${hero.extra || ''}
+    <section class="view-header">
+      <div>
+        <div class="eyebrow">${summary.eyebrow}</div>
+        <h2 class="view-title">${summary.title}</h2>
+        <p class="hero-summary">${summary.copy}</p>
+      </div>
+      <div class="summary-grid">
+        ${summary.stats
+          .map(
+            ([label, value]) => `
+              <div class="summary-card">
+                <div class="panel-label">${label}</div>
+                <div class="summary-value">${value}</div>
+              </div>
+            `
+          )
+          .join('')}
       </div>
     </section>
   `;
@@ -823,23 +832,23 @@ function renderOverview() {
     : `<div class="empty-state">No audit activity yet.</div>`;
 
   el('view-overview').innerHTML = `
-    ${renderScreenHero('overview')}
-    <div class="view-grid" data-source-screen="Advisor Inbox (Ethereal) - Exact Header Match">
+    ${renderViewHeader('overview')}
+    <div class="view-grid" data-source-screen="Digest (Ethereal) - Exact Header Match">
       <section class="panel span-7">
         <div class="panel-header">
           <div>
-            <div class="panel-label">SEC_00 // Advisor Inbox</div>
+            <div class="panel-label">Digest</div>
             <h2 class="panel-title">${state.digest.title}</h2>
             <p class="panel-copy">${state.digest.summary}</p>
           </div>
         </div>
-        <div class="list">${overviewCards() || '<div class="empty-state">No inbox items yet.</div>'}</div>
+        <div class="list">${overviewCards() || '<div class="empty-state">No digest items yet.</div>'}</div>
       </section>
 
       <section class="panel span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">SEC_01 // Follow-up</div>
+            <div class="panel-label">Follow-up</div>
             <h2 class="panel-title">Reminders</h2>
           </div>
         </div>
@@ -849,7 +858,7 @@ function renderOverview() {
       <section class="panel span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">SEC_02 // Source Plane</div>
+            <div class="panel-label">Configured sources</div>
             <h2 class="panel-title">Source health</h2>
           </div>
         </div>
@@ -859,7 +868,7 @@ function renderOverview() {
       <section class="panel span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">SEC_03 // Audit Trail</div>
+            <div class="panel-label">Audit trail</div>
             <h2 class="panel-title">Recent decisions</h2>
           </div>
         </div>
@@ -920,12 +929,12 @@ function renderPortfolio() {
     : `<div class="empty-state">No watchlists yet.</div>`;
 
   el('view-portfolio').innerHTML = `
-    ${renderScreenHero('portfolio')}
+    ${renderViewHeader('portfolio')}
     <div class="view-grid" data-source-screen="Portfolio (Consolidated)">
       <section class="panel span-7">
         <div class="panel-header">
           <div>
-            <div class="panel-label">SEC_01 // Portfolio</div>
+            <div class="panel-label">Portfolio</div>
             <h2 class="panel-title">Portfolio state</h2>
           </div>
         </div>
@@ -945,7 +954,7 @@ function renderPortfolio() {
       <section class="panel span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">SEC_02 // Watchlists</div>
+            <div class="panel-label">Watchlists</div>
             <h2 class="panel-title">Watchlists</h2>
           </div>
         </div>
@@ -955,7 +964,7 @@ function renderPortfolio() {
       <section class="form-card span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">ACT_01 // Add Exposure</div>
+            <div class="panel-label">Add holding</div>
             <h2 class="panel-title">New holding</h2>
           </div>
         </div>
@@ -973,7 +982,7 @@ function renderPortfolio() {
       <section class="form-card span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">ACT_02 // Track Adjacent Names</div>
+            <div class="panel-label">Create watchlist</div>
             <h2 class="panel-title">New watchlist</h2>
           </div>
         </div>
@@ -998,7 +1007,7 @@ function renderThemes() {
             <article class="panel span-12">
               <div class="panel-header">
                 <div>
-                  <div class="panel-label">SEC_02 // Theme Artifact</div>
+                  <div class="panel-label">Theme</div>
                   <h2 class="panel-title">${theme.title}</h2>
                   <p class="panel-copy">${theme.summary || 'No summary yet.'}</p>
                 </div>
@@ -1032,7 +1041,7 @@ function renderThemes() {
     : `<div class="empty-state">No themes defined yet.</div>`;
 
   el('view-themes').innerHTML = `
-    ${renderScreenHero('themes')}
+    ${renderViewHeader('themes')}
     <div class="view-grid" data-source-screen="Theme Artifact Mobile">
       <section class="span-7">
         <div class="view-grid">${themesHtml}</div>
@@ -1041,7 +1050,7 @@ function renderThemes() {
       <section class="form-card span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">ACT_03 // Belief Capture</div>
+            <div class="panel-label">Create theme</div>
             <h2 class="panel-title">Create theme</h2>
           </div>
         </div>
@@ -1111,12 +1120,12 @@ function renderEvents() {
     : `<div class="empty-state">No reminders created yet.</div>`;
 
   el('view-events').innerHTML = `
-    ${renderScreenHero('events')}
+    ${renderViewHeader('events')}
     <div class="view-grid" data-source-screen="Advisor Follow-up Mobile">
       <section class="panel span-7">
         <div class="panel-header">
           <div>
-            <div class="panel-label">SEC_03 // Deterministic Truth</div>
+            <div class="panel-label">Events</div>
             <h2 class="panel-title">Canonical events</h2>
           </div>
         </div>
@@ -1126,7 +1135,7 @@ function renderEvents() {
       <section class="panel span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">SEC_04 // Delivery</div>
+            <div class="panel-label">Reminders</div>
             <h2 class="panel-title">Reminders</h2>
           </div>
         </div>
@@ -1136,7 +1145,7 @@ function renderEvents() {
       <section class="form-card span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">ACT_04 // Record Fact</div>
+            <div class="panel-label">Record event</div>
             <h2 class="panel-title">New event</h2>
           </div>
         </div>
@@ -1178,7 +1187,7 @@ function renderEvents() {
       <section class="form-card span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">ACT_05 // Create Follow-up</div>
+            <div class="panel-label">Create reminder</div>
             <h2 class="panel-title">New reminder</h2>
           </div>
         </div>
@@ -1208,7 +1217,7 @@ function renderResearch() {
             <article class="panel span-12">
               <div class="panel-header">
                 <div>
-                  <div class="panel-label">SEC_04 // ${titleCase(job.triggerType)} · ${titleCase(job.mode)}</div>
+                  <div class="panel-label">${titleCase(job.triggerType)} research job</div>
                   <h2 class="panel-title">${job.question}</h2>
                   <p class="panel-copy">${report?.summary || 'No report attached yet.'}</p>
                 </div>
@@ -1288,7 +1297,7 @@ function renderResearch() {
     : `<div class="empty-state">No research jobs queued yet.</div>`;
 
   el('view-research').innerHTML = `
-    ${renderScreenHero('research')}
+    ${renderViewHeader('research')}
     <div class="view-grid" data-source-screen="Research (Ethereal) - Enhanced Analysis">
       <section class="span-7">
         <div class="view-grid">${jobsHtml}</div>
@@ -1297,7 +1306,7 @@ function renderResearch() {
       <section class="form-card span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">ACT_06 // Research Orchestration</div>
+            <div class="panel-label">Create research job</div>
             <h2 class="panel-title">Create research job</h2>
           </div>
         </div>
@@ -1334,7 +1343,7 @@ function renderResearch() {
 }
 
 function renderAll() {
-  el('workspace-title').textContent = 'O P E N _ A D V I S O R';
+  el('workspace-title').textContent = 'Open Advisor';
   el('status-label').textContent = isDemoMode ? 'Demo mode' : 'API connected';
   el('metric-assets').textContent = state.portfolioSummary.trackedAssetsCount;
   el('metric-reminders').textContent = state.portfolioSummary.openRemindersCount;
@@ -1557,5 +1566,5 @@ function bindActions() {
 
 refreshState().catch((error) => {
   el('status-label').textContent = 'API unavailable';
-  el('view-overview').innerHTML = `<section class="screen-hero"><div class="hero-copy"><span class="eyebrow">LOAD FAILURE</span><h2 class="hero-title">Open Advisor could not initialize.</h2><p class="hero-summary">${error.message}</p></div></section>`;
+  el('view-overview').innerHTML = `<section class="view-header"><div><span class="eyebrow">Load failure</span><h2 class="view-title">Open Advisor could not initialize.</h2><p class="hero-summary">${error.message}</p></div></section>`;
 });

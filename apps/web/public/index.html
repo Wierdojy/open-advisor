@@ -3,30 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>OPEN_ADVISOR</title>
+    <title>Open Advisor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Manrope:wght@200..800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="background-plane" aria-hidden="true">
-      <div class="vertical-guide guide-left"></div>
-      <div class="vertical-guide guide-center"></div>
-      <div class="vertical-guide guide-right"></div>
-      <div class="orb orb-a"></div>
-      <div class="orb orb-b"></div>
-    </div>
-
-    <div class="app-shell" data-plane="STITCH_MOBILE_14195199247391376621">
+    <div class="app-shell">
       <header class="top-app-bar">
-        <button class="icon-button" type="button" aria-label="Menu">
-          <span class="material-symbols-outlined">menu</span>
-        </button>
-        <h1 id="workspace-title" class="brand-title">O P E N _ A D V I S O R</h1>
-        <button id="reset-data" class="icon-button" type="button" aria-label="Reset seed data">
-          <span class="material-symbols-outlined">account_circle</span>
-        </button>
+        <h1 id="workspace-title" class="brand-title">Open Advisor</h1>
+        <button id="reset-data" class="button button-ghost small" type="button">Reset demo</button>
       </header>
 
       <main class="main-shell">
@@ -35,7 +22,26 @@
             <span class="status-dot"></span>
             <span id="status-label">Connecting</span>
           </div>
-          <span class="meta">LUCIDITY_PROTO_7.0</span>
+          <span class="meta">Static demo</span>
+        </section>
+
+        <section class="metric-strip" aria-label="Current workspace totals">
+          <article class="metric">
+            <div class="panel-label">Tracked assets</div>
+            <div class="metric-value" id="metric-assets">--</div>
+          </article>
+          <article class="metric">
+            <div class="panel-label">Open reminders</div>
+            <div class="metric-value" id="metric-reminders">--</div>
+          </article>
+          <article class="metric">
+            <div class="panel-label">Digest items</div>
+            <div class="metric-value" id="metric-inbox">--</div>
+          </article>
+          <article class="metric">
+            <div class="panel-label">Research reports</div>
+            <div class="metric-value" id="metric-research">--</div>
+          </article>
         </section>
 
         <section id="view-overview" class="view active-view"></section>
@@ -43,31 +49,8 @@
         <section id="view-themes" class="view"></section>
         <section id="view-events" class="view"></section>
         <section id="view-research" class="view"></section>
-
-        <section class="metric-strip">
-          <article class="metric">
-            <div class="panel-label">NET // Assets</div>
-            <div class="metric-value" id="metric-assets">--</div>
-          </article>
-          <article class="metric">
-            <div class="panel-label">OPEN // Follow-up</div>
-            <div class="metric-value" id="metric-reminders">--</div>
-          </article>
-          <article class="metric">
-            <div class="panel-label">ADVISOR // Inbox</div>
-            <div class="metric-value" id="metric-inbox">--</div>
-          </article>
-          <article class="metric">
-            <div class="panel-label">RESEARCH // Runs</div>
-            <div class="metric-value" id="metric-research">--</div>
-          </article>
-        </section>
-
       </main>
 
-      <button class="floating-action" data-view="research" type="button" aria-label="Open research">
-        <span class="material-symbols-outlined">auto_awesome</span>
-      </button>
       <nav id="nav" class="bottom-nav" aria-label="Primary"></nav>
     </div>
 
