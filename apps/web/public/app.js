@@ -3,11 +3,11 @@ const apiBase = localApiHosts.has(window.location.hostname)
   ? `${window.location.protocol}//${window.location.hostname}:3001`
   : null;
 const viewMeta = {
-  overview: { code: '00', label: 'Inbox' },
-  portfolio: { code: '01', label: 'Portfolio' },
-  themes: { code: '02', label: 'Themes' },
-  events: { code: '03', label: 'Events' },
-  research: { code: '04', label: 'Research' }
+  overview: { code: '00', label: 'Advisor', icon: 'insights' },
+  portfolio: { code: '01', label: 'Portfolio', icon: 'account_balance_wallet' },
+  themes: { code: '02', label: 'Themes', icon: 'grid_view' },
+  events: { code: '03', label: 'Follow-up', icon: 'event_available' },
+  research: { code: '04', label: 'Research', icon: 'auto_awesome' }
 };
 const views = Object.keys(viewMeta);
 
@@ -86,8 +86,9 @@ function renderNav() {
     .map((view) => {
       const meta = viewMeta[view];
       return `
-        <button class="nav-item ${currentView === view ? 'active' : ''}" data-view="${view}">
-            <span class="nav-code">[${meta.code}]</span>
+        <button class="nav-item ${currentView === view ? 'active' : ''}" data-view="${view}" aria-label="${meta.label}">
+            <span class="material-symbols-outlined">${meta.icon}</span>
+            <span class="nav-code">${meta.code}</span>
             <span class="nav-label">${meta.label}</span>
         </button>
       `;
@@ -692,6 +693,79 @@ function overviewCards() {
     .join('');
 }
 
+
+const crystalPillarImage = 'https://lh3.googleusercontent.com/aida/ADBb0ugAj3dKaHY2M7k6HITf2pOWYrEP4Lh_PGk-GjZP_bV39sVk7V1GQk0KVgBEDK477m-JKvcGbJCUxamqFf7b-_DbmDUSOvJqAzAYmG8kZOT8bTLomLlm7tJ7FlW8vL5kR6ZiZTi3872kJRiDJFG8kQbDXIu6tB1y8tI46JRnYDzGF-0lJH7Km7blfnWtijw9EULZ-4BLSuozEnYwFhv5K3JGDY_g_IpzaGIstFiOd7dGkwMMQwgGyFdxSi9s';
+const crystalShardImage = 'https://lh3.googleusercontent.com/aida/ADBb0ugVmpTjZPfRmXRjsI-T5DmtWaAkLR7oOnmyp7_p8SzvQV26J_rdKoZ9yE-pyZZSNCWiUzpX5w_cYnyV7G_tq34ZxuMnvJrelXLgU18uxZmepei9voNv9COrHJwXMrN7vmKOobUlorr30oJiZtVyAIui3wkoaKO6UcD-ZwyCqB5rKDSQLJEAiVvDSmlKTXE8rN3OFvmop4ji5Q_mRDoP14nYIckteEKqK_OX00IgM_WPTxuPEJJHPvzmiHYd';
+
+function renderScreenHero(view) {
+  const activeInbox = state.inbox.filter((item) => item.state !== 'archived').length;
+  const hero = {
+    overview: {
+      source: 'Advisor Inbox (Ethereal) - Exact Header Match',
+      eyebrow: 'STRATEGIC DIALOGUE',
+      title: 'Unlock a wealth of <span class="accent">strategic possibilities.</span>',
+      copy: state.digest.summary,
+      image: crystalPillarImage,
+      extra: `
+        <div class="advisor-thread hero-search">
+          <div class="message-bubble-in">
+            <p class="item-text">Analysis found ${activeInbox} advisor signals and ${state.portfolioSummary.openRemindersCount} open follow-ups. Review the proposed sequence?</p>
+            <div class="meta">ADVISOR-01 • LIVE</div>
+          </div>
+        </div>`
+    },
+    portfolio: {
+      source: 'Portfolio (Consolidated)',
+      eyebrow: 'NET ACCOUNT VALUE',
+      title: `<span class="iridescent-text">${formatCurrency(state.portfolioSummary.estimatedCostBasis)}</span>`,
+      copy: `${state.portfolioSummary.trackedAssetsCount} tracked assets across ${state.portfolioSummary.holdingsCount} holdings and ${state.portfolioSummary.watchlistsCount} watchlists.`,
+      image: crystalShardImage,
+      extra: `<div class="chart-bars hero-search" aria-hidden="true"><span style="height:42%"></span><span style="height:52%"></span><span style="height:66%"></span><span class="active" style="height:88%"></span><span style="height:74%"></span><span style="height:96%"></span></div>`
+    },
+    themes: {
+      source: 'Onboarding (Ethereal) - Layered Overlap',
+      eyebrow: 'BELIEF ARCHITECTURE',
+      title: 'Intelligence in <span class="accent">Clarity</span>',
+      copy: `${state.themes.filter((theme) => theme.status === 'active').length} active themes are being monitored through translucent data architecture.`,
+      image: crystalPillarImage,
+      extra: `<div class="hero-search"><button class="button theme-research" data-id="${state.themes[0]?.id || ''}" data-title="${state.themes[0]?.title || 'active themes'}">RESEARCH ACTIVE THEME</button></div>`
+    },
+    events: {
+      source: 'Advisor Follow-up Mobile',
+      eyebrow: 'DETERMINISTIC TRUTH',
+      title: 'Every fact becomes a <span class="accent">follow-up surface.</span>',
+      copy: `${state.calendar.length} canonical events and ${state.reminders.length} reminders are arranged for review.`,
+      image: crystalPillarImage,
+      extra: `<div class="hero-search"><button class="button" data-view="events">RECORD FACT</button></div>`
+    },
+    research: {
+      source: 'Research (Ethereal) - Enhanced Analysis',
+      eyebrow: 'INTELLIGENT EXPLORATION',
+      title: 'Discover the pulse of the <span class="accent">digital economy.</span>',
+      copy: `${state.researchWorkspace.length} research jobs and ${state.researchReports.length} reports are available for synthesis.`,
+      image: crystalShardImage,
+      extra: `
+        <div class="hero-search search-shell">
+          <span class="material-symbols-outlined">search</span>
+          <input aria-label="Research query" placeholder="Explore assets, trends, or protocols..." />
+          <span class="material-symbols-outlined">tune</span>
+        </div>`
+    }
+  }[view];
+
+  return `
+    <section class="screen-hero" data-source-screen="${hero.source}">
+      <div class="hero-visual"><img src="${hero.image}" alt="" /></div>
+      <div class="hero-copy">
+        <span class="eyebrow">${hero.eyebrow}</span>
+        <h2 class="hero-title">${hero.title}</h2>
+        <p class="hero-summary">${hero.copy}</p>
+        ${hero.extra || ''}
+      </div>
+    </section>
+  `;
+}
+
 function renderOverview() {
   const remindersHtml = state.reminders.length
     ? state.reminders
@@ -749,7 +823,8 @@ function renderOverview() {
     : `<div class="empty-state">No audit activity yet.</div>`;
 
   el('view-overview').innerHTML = `
-    <div class="view-grid">
+    ${renderScreenHero('overview')}
+    <div class="view-grid" data-source-screen="Advisor Inbox (Ethereal) - Exact Header Match">
       <section class="panel span-7">
         <div class="panel-header">
           <div>
@@ -845,7 +920,8 @@ function renderPortfolio() {
     : `<div class="empty-state">No watchlists yet.</div>`;
 
   el('view-portfolio').innerHTML = `
-    <div class="view-grid">
+    ${renderScreenHero('portfolio')}
+    <div class="view-grid" data-source-screen="Portfolio (Consolidated)">
       <section class="panel span-7">
         <div class="panel-header">
           <div>
@@ -956,7 +1032,8 @@ function renderThemes() {
     : `<div class="empty-state">No themes defined yet.</div>`;
 
   el('view-themes').innerHTML = `
-    <div class="view-grid">
+    ${renderScreenHero('themes')}
+    <div class="view-grid" data-source-screen="Theme Artifact Mobile">
       <section class="span-7">
         <div class="view-grid">${themesHtml}</div>
       </section>
@@ -1034,7 +1111,8 @@ function renderEvents() {
     : `<div class="empty-state">No reminders created yet.</div>`;
 
   el('view-events').innerHTML = `
-    <div class="view-grid">
+    ${renderScreenHero('events')}
+    <div class="view-grid" data-source-screen="Advisor Follow-up Mobile">
       <section class="panel span-7">
         <div class="panel-header">
           <div>
@@ -1210,7 +1288,8 @@ function renderResearch() {
     : `<div class="empty-state">No research jobs queued yet.</div>`;
 
   el('view-research').innerHTML = `
-    <div class="view-grid">
+    ${renderScreenHero('research')}
+    <div class="view-grid" data-source-screen="Research (Ethereal) - Enhanced Analysis">
       <section class="span-7">
         <div class="view-grid">${jobsHtml}</div>
       </section>
@@ -1255,8 +1334,7 @@ function renderResearch() {
 }
 
 function renderAll() {
-  el('workspace-title').textContent = 'Open Advisor';
-  el('digest-summary').textContent = state.digest.summary;
+  el('workspace-title').textContent = 'O P E N _ A D V I S O R';
   el('status-label').textContent = isDemoMode ? 'Demo mode' : 'API connected';
   el('metric-assets').textContent = state.portfolioSummary.trackedAssetsCount;
   el('metric-reminders').textContent = state.portfolioSummary.openRemindersCount;
@@ -1479,5 +1557,5 @@ function bindActions() {
 
 refreshState().catch((error) => {
   el('status-label').textContent = 'API unavailable';
-  el('digest-summary').textContent = `Failed to load product state: ${error.message}`;
+  el('view-overview').innerHTML = `<section class="screen-hero"><div class="hero-copy"><span class="eyebrow">LOAD FAILURE</span><h2 class="hero-title">Open Advisor could not initialize.</h2><p class="hero-summary">${error.message}</p></div></section>`;
 });
