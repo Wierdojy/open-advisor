@@ -4,112 +4,85 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Open Advisor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Sora:wght@400;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="site-shell">
-      <header class="site-header">
-        <div class="site-header__inner">
-          <div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <section class="brand-block">
+          <div class="brand-copy-stack">
+            <div class="brand-kicker">Deterministic Core</div>
             <div class="brand-mark">Open Advisor</div>
-            <div class="brand-subtitle">Thesis-driven market copilot</div>
+            <p class="brand-copy">Track truth, add meaning, then decide what deserves another look.</p>
           </div>
-          <nav class="site-nav">
-            <a href="#overview">Overview</a>
-            <a href="#workspace">Workspace</a>
-            <a href="#flows">Flows</a>
-          </nav>
-        </div>
-      </header>
-
-      <main class="site-main">
-        <section class="marketing-hero" id="overview">
-          <div class="marketing-copy">
-            <div class="eyebrow">Calm investor research workspace</div>
-            <h1>Monitor holdings.<br />Track beliefs.<br />Stay ready.</h1>
-            <p class="lead" id="digest-summary">Loading today’s market brief…</p>
-            <div class="hero-actions">
-              <button data-view="research">Run research sweep</button>
-              <button data-view="reminders" class="secondary">View reminders</button>
-            </div>
-          </div>
-          <div class="hero-panel card">
-            <div class="section-title">At a glance</div>
-            <div class="hero-stats">
-              <div class="hero-stat">
-                <div class="hero-stat__label">Owned positions</div>
-                <div class="hero-stat__value" id="stat-holdings">—</div>
-              </div>
-              <div class="hero-stat">
-                <div class="hero-stat__label">Active theses</div>
-                <div class="hero-stat__value" id="stat-theses">—</div>
-              </div>
-              <div class="hero-stat">
-                <div class="hero-stat__label">Upcoming catalysts</div>
-                <div class="hero-stat__value" id="stat-catalysts">—</div>
-              </div>
-              <div class="hero-stat">
-                <div class="hero-stat__label">Pending follow-ups</div>
-                <div class="hero-stat__value" id="stat-alerts">—</div>
-              </div>
-            </div>
+          <div class="brand-art">
+            <img
+              src="https://lh3.googleusercontent.com/aida/ADBb0ug7bTm9hm05DYm221gbzlIrvYlMv8Jt_7Xl8g4rd284uCVGvku0UCkaXN08csgs1FpyumjdOY1SCPgAuqgjGstRut8gBwjjTC2mW1NSkR553Dn9kWMhPtm6zHm-05Isua8SmKANpZSP8TenvSsamO4f1W4pI68nsyiV4Wt87JvHAcEvXNjbm7Puw3H1exLGM14U1_tVDUYrmhBftn0ZEqmvJGnTI-e7q9edQkqKRTkBRE8nRj0WuForlBbD"
+              alt=""
+            />
           </div>
         </section>
 
-        <section class="story-grid" id="flows">
-          <div class="story-card card">
-            <div class="section-title">Why this matters</div>
-            <h3>Signal over feed noise</h3>
-            <p>Open Advisor highlights the developments that matter to your positions and themes instead of acting like a broker feed.</p>
-          </div>
-          <div class="story-card card">
-            <div class="section-title">Research companion</div>
-            <h3>Move from event to context</h3>
-            <p>Every important item should explain what happened, why it matters, what to check next, and where the information came from.</p>
-          </div>
-          <div class="story-card card">
-            <div class="section-title">Follow-up memory</div>
-            <h3>Keep your process intact</h3>
-            <p>Notes, reminders, and review states stay attached to the assets and theses you care about so the product feels like a true copilot.</p>
-          </div>
+        <section class="sidebar-panel sidebar-panel-digest">
+          <div class="panel-label">Live Digest</div>
+          <p id="digest-summary" class="sidebar-copy">Loading product state...</p>
         </section>
 
-        <section class="workspace-shell" id="workspace">
-          <div class="workspace-sidebar">
-            <div class="workspace-sidebar__header">
-              <div class="brand">Advisor Workspace</div>
-              <div class="tag">Stitch-inspired MVP</div>
-            </div>
-            <nav id="nav" class="workspace-nav"></nav>
-            <div class="sidebar-actions">
-              <button id="reset-data" class="secondary small">Reset demo data</button>
-            </div>
+        <section class="sidebar-panel">
+          <div class="panel-label">Workspace Status</div>
+          <div class="status-row">
+            <span class="status-dot"></span>
+            <span id="status-label">Connecting to API</span>
           </div>
-
-          <div class="workspace-main">
-            <header class="workspace-header card">
-              <div>
-                <div class="eyebrow">Live workspace</div>
-                <h2 id="workspace-title">Today’s brief</h2>
-                <p class="workspace-sub" id="workspace-subtitle">High-signal monitoring, reminders, discoveries, and research in one calm workspace.</p>
-              </div>
-              <div class="workspace-quick-actions">
-                <button data-view="watchlists" class="secondary">Open watchlists</button>
-                <button data-view="discover" class="secondary">Open discover</button>
-              </div>
-            </header>
-
-            <section id="view-home" class="view active-view"></section>
-            <section id="view-watchlists" class="view"></section>
-            <section id="view-discover" class="view"></section>
-            <section id="view-reminders" class="view"></section>
-            <section id="view-research" class="view"></section>
-          </div>
+          <button id="reset-data" class="button button-secondary">Reset seed data</button>
         </section>
+
+        <nav id="nav" class="sidebar-nav"></nav>
+      </aside>
+
+      <main class="main-shell">
+        <header class="topbar">
+          <div class="hero-copy">
+            <div class="eyebrow">Hybrid architecture MVP</div>
+            <h1 id="workspace-title">Operating surface</h1>
+            <p class="hero-summary">What happened, why it matters, and what to check next.</p>
+          </div>
+          <div class="topbar-actions">
+            <button data-view="research" class="button button-secondary">Research</button>
+            <button data-view="events" class="button">Record event</button>
+          </div>
+        </header>
+
+        <section class="metric-strip">
+          <article class="metric">
+            <div class="panel-label">Tracked assets</div>
+            <div class="metric-value" id="metric-assets">--</div>
+          </article>
+          <article class="metric">
+            <div class="panel-label">Open reminders</div>
+            <div class="metric-value" id="metric-reminders">--</div>
+          </article>
+          <article class="metric">
+            <div class="panel-label">Inbox items</div>
+            <div class="metric-value" id="metric-inbox">--</div>
+          </article>
+          <article class="metric">
+            <div class="panel-label">Research reports</div>
+            <div class="metric-value" id="metric-research">--</div>
+          </article>
+        </section>
+
+        <section id="view-overview" class="view active-view"></section>
+        <section id="view-portfolio" class="view"></section>
+        <section id="view-themes" class="view"></section>
+        <section id="view-events" class="view"></section>
+        <section id="view-research" class="view"></section>
       </main>
-
-      <nav id="mobile-nav" class="mobile-nav"></nav>
     </div>
+
     <script src="./app.js"></script>
   </body>
 </html>
