@@ -10,13 +10,14 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <div class="app-shell" data-plane="OA_00">
       <aside class="sidebar">
         <section class="brand-block">
+          <div class="corner-code">[00, 04]</div>
           <div class="brand-copy-stack">
-            <div class="brand-kicker">Deterministic Core</div>
+            <div class="brand-kicker">Kinetic Artifact</div>
             <div class="brand-mark">Open Advisor</div>
-            <p class="brand-copy">Track truth, add meaning, then decide what deserves another look.</p>
+            <p class="brand-copy">Portfolio truth, research memory, and follow-up signals arranged as investable artifacts.</p>
           </div>
           <div class="brand-art">
             <img
@@ -27,12 +28,12 @@
         </section>
 
         <section class="sidebar-panel sidebar-panel-digest">
-          <div class="panel-label">Live Digest</div>
+          <div class="panel-label">SEC_00 // Digest</div>
           <p id="digest-summary" class="sidebar-copy">Loading product state...</p>
         </section>
 
         <section class="sidebar-panel">
-          <div class="panel-label">Workspace Status</div>
+          <div class="panel-label">SYS // Status</div>
           <div class="status-row">
             <span class="status-dot"></span>
             <span id="status-label">Connecting to API</span>
@@ -46,9 +47,15 @@
       <main class="main-shell">
         <header class="topbar">
           <div class="hero-copy">
-            <div class="eyebrow">Hybrid architecture MVP</div>
+            <div class="eyebrow">Advisor Surface // Live System</div>
             <h1 id="workspace-title">Operating surface</h1>
             <p class="hero-summary">What happened, why it matters, and what to check next.</p>
+          </div>
+          <div class="hero-artifact" aria-hidden="true">
+            <img
+              src="https://lh3.googleusercontent.com/aida/ADBb0ug7bTm9hm05DYm221gbzlIrvYlMv8Jt_7Xl8g4rd284uCVGvku0UCkaXN08csgs1FpyumjdOY1SCPgAuqgjGstRut8gBwjjTC2mW1NSkR553Dn9kWMhPtm6zHm-05Isua8SmKANpZSP8TenvSsamO4f1W4pI68nsyiV4Wt87JvHAcEvXNjbm7Puw3H1exLGM14U1_tVDUYrmhBftn0ZEqmvJGnTI-e7q9edQkqKRTkBRE8nRj0WuForlBbD"
+              alt=""
+            />
           </div>
           <div class="topbar-actions">
             <button data-view="research" class="button button-secondary">Research</button>
@@ -58,19 +65,19 @@
 
         <section class="metric-strip">
           <article class="metric">
-            <div class="panel-label">Tracked assets</div>
+            <div class="panel-label">DAT_01 // Tracked assets</div>
             <div class="metric-value" id="metric-assets">--</div>
           </article>
           <article class="metric">
-            <div class="panel-label">Open reminders</div>
+            <div class="panel-label">DAT_02 // Open reminders</div>
             <div class="metric-value" id="metric-reminders">--</div>
           </article>
           <article class="metric">
-            <div class="panel-label">Inbox items</div>
+            <div class="panel-label">DAT_03 // Inbox items</div>
             <div class="metric-value" id="metric-inbox">--</div>
           </article>
           <article class="metric">
-            <div class="panel-label">Research reports</div>
+            <div class="panel-label">DAT_04 // Research reports</div>
             <div class="metric-value" id="metric-research">--</div>
           </article>
         </section>

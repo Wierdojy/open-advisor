@@ -3,7 +3,7 @@ const apiBase = localApiHosts.has(window.location.hostname)
   ? `${window.location.protocol}//${window.location.hostname}:3001`
   : null;
 const viewMeta = {
-  overview: { code: '00', label: 'Overview' },
+  overview: { code: '00', label: 'Inbox' },
   portfolio: { code: '01', label: 'Portfolio' },
   themes: { code: '02', label: 'Themes' },
   events: { code: '03', label: 'Events' },
@@ -87,8 +87,8 @@ function renderNav() {
       const meta = viewMeta[view];
       return `
         <button class="nav-item ${currentView === view ? 'active' : ''}" data-view="${view}">
-          <span class="nav-code">${meta.code}</span>
-          <span class="nav-label">${meta.label}</span>
+            <span class="nav-code">[${meta.code}]</span>
+            <span class="nav-label">${meta.label}</span>
         </button>
       `;
     })
@@ -753,7 +753,7 @@ function renderOverview() {
       <section class="panel span-7">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Today</div>
+            <div class="panel-label">SEC_00 // Advisor Inbox</div>
             <h2 class="panel-title">${state.digest.title}</h2>
             <p class="panel-copy">${state.digest.summary}</p>
           </div>
@@ -764,7 +764,7 @@ function renderOverview() {
       <section class="panel span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Follow-up</div>
+            <div class="panel-label">SEC_01 // Follow-up</div>
             <h2 class="panel-title">Reminders</h2>
           </div>
         </div>
@@ -774,7 +774,7 @@ function renderOverview() {
       <section class="panel span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Trust stack</div>
+            <div class="panel-label">SEC_02 // Source Plane</div>
             <h2 class="panel-title">Source health</h2>
           </div>
         </div>
@@ -784,7 +784,7 @@ function renderOverview() {
       <section class="panel span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Audit</div>
+            <div class="panel-label">SEC_03 // Audit Trail</div>
             <h2 class="panel-title">Recent decisions</h2>
           </div>
         </div>
@@ -849,7 +849,7 @@ function renderPortfolio() {
       <section class="panel span-7">
         <div class="panel-header">
           <div>
-            <div class="panel-label">System of record</div>
+            <div class="panel-label">SEC_01 // Portfolio</div>
             <h2 class="panel-title">Portfolio state</h2>
           </div>
         </div>
@@ -869,7 +869,7 @@ function renderPortfolio() {
       <section class="panel span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Curated context</div>
+            <div class="panel-label">SEC_02 // Watchlists</div>
             <h2 class="panel-title">Watchlists</h2>
           </div>
         </div>
@@ -879,7 +879,7 @@ function renderPortfolio() {
       <section class="form-card span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Add exposure</div>
+            <div class="panel-label">ACT_01 // Add Exposure</div>
             <h2 class="panel-title">New holding</h2>
           </div>
         </div>
@@ -897,7 +897,7 @@ function renderPortfolio() {
       <section class="form-card span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Track adjacent names</div>
+            <div class="panel-label">ACT_02 // Track Adjacent Names</div>
             <h2 class="panel-title">New watchlist</h2>
           </div>
         </div>
@@ -922,7 +922,7 @@ function renderThemes() {
             <article class="panel span-12">
               <div class="panel-header">
                 <div>
-                  <div class="panel-label">Theme</div>
+                  <div class="panel-label">SEC_02 // Theme Artifact</div>
                   <h2 class="panel-title">${theme.title}</h2>
                   <p class="panel-copy">${theme.summary || 'No summary yet.'}</p>
                 </div>
@@ -964,7 +964,7 @@ function renderThemes() {
       <section class="form-card span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Belief capture</div>
+            <div class="panel-label">ACT_03 // Belief Capture</div>
             <h2 class="panel-title">Create theme</h2>
           </div>
         </div>
@@ -1038,7 +1038,7 @@ function renderEvents() {
       <section class="panel span-7">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Deterministic truth</div>
+            <div class="panel-label">SEC_03 // Deterministic Truth</div>
             <h2 class="panel-title">Canonical events</h2>
           </div>
         </div>
@@ -1048,7 +1048,7 @@ function renderEvents() {
       <section class="panel span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Delivery</div>
+            <div class="panel-label">SEC_04 // Delivery</div>
             <h2 class="panel-title">Reminders</h2>
           </div>
         </div>
@@ -1058,7 +1058,7 @@ function renderEvents() {
       <section class="form-card span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Record fact</div>
+            <div class="panel-label">ACT_04 // Record Fact</div>
             <h2 class="panel-title">New event</h2>
           </div>
         </div>
@@ -1100,7 +1100,7 @@ function renderEvents() {
       <section class="form-card span-6">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Create follow-up</div>
+            <div class="panel-label">ACT_05 // Create Follow-up</div>
             <h2 class="panel-title">New reminder</h2>
           </div>
         </div>
@@ -1130,7 +1130,7 @@ function renderResearch() {
             <article class="panel span-12">
               <div class="panel-header">
                 <div>
-                  <div class="panel-label">${titleCase(job.triggerType)} · ${titleCase(job.mode)}</div>
+                  <div class="panel-label">SEC_04 // ${titleCase(job.triggerType)} · ${titleCase(job.mode)}</div>
                   <h2 class="panel-title">${job.question}</h2>
                   <p class="panel-copy">${report?.summary || 'No report attached yet.'}</p>
                 </div>
@@ -1218,7 +1218,7 @@ function renderResearch() {
       <section class="form-card span-5">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Research orchestration</div>
+            <div class="panel-label">ACT_06 // Research Orchestration</div>
             <h2 class="panel-title">Create research job</h2>
           </div>
         </div>
@@ -1255,7 +1255,7 @@ function renderResearch() {
 }
 
 function renderAll() {
-  el('workspace-title').textContent = `${state.user.name}'s market operating system`;
+  el('workspace-title').textContent = 'Open Advisor';
   el('digest-summary').textContent = state.digest.summary;
   el('status-label').textContent = isDemoMode ? 'Demo mode' : 'API connected';
   el('metric-assets').textContent = state.portfolioSummary.trackedAssetsCount;
