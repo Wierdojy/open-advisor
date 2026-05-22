@@ -953,19 +953,22 @@ function renderChat() {
   const identityTags = getIdentityTags();
 
   el('view-chat').innerHTML = `
-    ${renderViewHeader(
-      'chat',
-      'Chat',
-      'Separate portfolio questions, thesis work, and follow-ups into focused conversations with the advisor.'
-    )}
-    <div class="chat-scene ${uiState.chat.isTyping ? 'typing' : ''}">
+    <div class="chat-view ${uiState.chat.isTyping ? 'typing' : ''}">
       <div class="chat-atmosphere" aria-hidden="true">
-        <div class="particle-core"></div>
+        <div class="particle-core particle-core--a"></div>
+        <div class="particle-core particle-core--b"></div>
+        <div class="particle-core particle-core--c"></div>
         <div class="orbit orbit-a"></div>
         <div class="orbit orbit-b"></div>
         <div class="orbit orbit-c"></div>
-        <div class="particle-dust">${createParticles(48)}</div>
+        <div class="orbit orbit-d"></div>
+        <div class="particle-dust">${createParticles(72)}</div>
       </div>
+      ${renderViewHeader(
+        'chat',
+        'Chat',
+        'Separate portfolio questions, thesis work, and follow-ups into focused conversations with the advisor.'
+      )}
       <div class="view-grid chat-scene__content">
       <section class="panel">
         <div class="panel-header">

@@ -212,6 +212,22 @@ textarea { min-height: 108px; resize: vertical; }
   padding-top: 2px;
 }
 
+.chat-view .stitch-page-title--minimal {
+  position: relative;
+  z-index: 1;
+  padding-top: 10px;
+}
+
+.chat-view .stitch-page-title--minimal::after {
+  background: linear-gradient(90deg, rgba(255,255,255,0.38), rgba(255,255,255,0.02));
+}
+
+.chat-view .stitch-page-title__copy,
+.chat-view .stitch-page-title__heading,
+.chat-view .stitch-page-title .eyebrow {
+  text-shadow: 0 6px 24px rgba(255,255,255,0.18);
+}
+
 .stitch-page-title::after {
   content: "";
   position: absolute;
@@ -616,43 +632,56 @@ textarea { min-height: 108px; resize: vertical; }
 .thread-card.active { border-color: rgba(96, 91, 119, 0.35); box-shadow: inset 0 0 0 1px rgba(96, 91, 119, 0.12); }
 
 .chat-panel { overflow: visible; }
-.chat-scene {
+.chat-view {
   position: relative;
   isolation: isolate;
-  margin: -10px 0 0;
-  padding: 0 16px 18px;
-  min-height: calc(100vh - 170px);
+  margin: -14px 0 0;
+  padding: 0 0 24px;
+  min-height: calc(100vh - 160px);
+}
+
+.chat-view::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255,255,255,0.32), transparent 28%),
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0));
+  pointer-events: none;
+  z-index: 0;
 }
 .chat-scene__content {
   position: relative;
   z-index: 1;
+  padding: 0 16px;
 }
 .chat-atmosphere {
   position: absolute;
-  inset: -72px 0 -36px;
+  inset: 0 0 -40px;
   overflow: hidden;
   pointer-events: none;
   background:
-    radial-gradient(circle at 50% 38%, rgba(216, 209, 242, 0.42), rgba(255,255,255,0.06) 28%, rgba(193,232,250,0.22) 54%, transparent 100%),
-    radial-gradient(circle at 14% 16%, rgba(251, 218, 235, 0.24), transparent 24%),
-    radial-gradient(circle at 86% 62%, rgba(193, 232, 250, 0.22), transparent 30%),
-    radial-gradient(circle at 52% 82%, rgba(216, 209, 242, 0.16), transparent 24%),
+    radial-gradient(circle at 50% 18%, rgba(216, 209, 242, 0.38), rgba(255,255,255,0.05) 24%, rgba(193,232,250,0.18) 48%, transparent 80%),
+    radial-gradient(circle at 8% 14%, rgba(251, 218, 235, 0.22), transparent 22%),
+    radial-gradient(circle at 92% 22%, rgba(193, 232, 250, 0.18), transparent 24%),
+    radial-gradient(circle at 70% 76%, rgba(193, 232, 250, 0.14), transparent 22%),
+    radial-gradient(circle at 24% 82%, rgba(216, 209, 242, 0.16), transparent 18%),
     linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
   opacity: 1;
   z-index: 0;
-  mask-image: linear-gradient(180deg, rgba(0,0,0,0.98), rgba(0,0,0,0.96) 82%, rgba(0,0,0,0));
+  mask-image: linear-gradient(180deg, rgba(0,0,0,1), rgba(0,0,0,0.97) 84%, rgba(0,0,0,0));
 }
 .chat-identity-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .chat-log { display: grid; gap: 10px; max-height: 420px; overflow: auto; padding-right: 2px; }
-.chat-scene .panel,
-.chat-scene .thread-card,
-.chat-scene .chat-bubble {
-  background: rgba(255,255,255,0.52);
+.chat-view .panel,
+.chat-view .thread-card,
+.chat-view .chat-bubble {
+  background: rgba(255,255,255,0.42);
   backdrop-filter: blur(18px) saturate(1.06);
 }
-.chat-scene .panel {
-  border-color: rgba(121, 118, 125, 0.12);
-  box-shadow: 0 20px 44px rgba(111, 106, 132, 0.1);
+.chat-view .panel {
+  border-color: rgba(121, 118, 125, 0.1);
+  box-shadow: 0 24px 54px rgba(111, 106, 132, 0.08);
 }
 .chat-bubble.user {
   margin-left: auto;
@@ -681,13 +710,32 @@ textarea { min-height: 108px; resize: vertical; }
 }
 .particle-core {
   position: absolute;
-  inset: 50% auto auto 50%;
-  width: 26px;
-  height: 26px;
-  margin: -13px 0 0 -13px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, rgba(96,91,119,0.9), rgba(193,232,250,0.9));
   box-shadow: 0 0 26px rgba(96,91,119,0.35);
+}
+.particle-core--a {
+  left: 50%;
+  top: 21%;
+  margin: -14px 0 0 -14px;
+}
+.particle-core--b {
+  left: 18%;
+  top: 58%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  opacity: 0.56;
+}
+.particle-core--c {
+  left: 82%;
+  top: 68%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  opacity: 0.52;
 }
 .orbit {
   position: absolute;
@@ -708,19 +756,21 @@ textarea { min-height: 108px; resize: vertical; }
   background: rgba(96,91,119,0.48);
   box-shadow: 0 0 18px rgba(193,232,250,0.55);
 }
-.orbit-a { width: 240px; height: 240px; margin: -120px 0 0 -120px; animation: orbitSpin 18s linear infinite; }
-.orbit-b { width: 176px; height: 176px; margin: -88px 0 0 -88px; animation: orbitSpinReverse 13s linear infinite; }
-.orbit-c { width: 320px; height: 164px; margin: -82px 0 0 -160px; animation: orbitTilt 16s ease-in-out infinite; }
+.orbit-a { width: 300px; height: 300px; margin: -150px 0 0 -150px; animation: orbitSpin 22s linear infinite; }
+.orbit-b { width: 220px; height: 220px; margin: -110px 0 0 -110px; animation: orbitSpinReverse 16s linear infinite; }
+.orbit-c { width: 420px; height: 220px; margin: -110px 0 0 -210px; animation: orbitTilt 20s ease-in-out infinite; }
+.orbit-d { width: 540px; height: 540px; margin: -270px 0 0 -270px; animation: orbitSpinReverse 34s linear infinite; opacity: 0.28; }
 .particle-stage.typing .particle-core,
-.chat-scene.typing .particle-core { animation: pulseCore 1s ease-in-out infinite; }
+.chat-view.typing .particle-core { animation: pulseCore 1s ease-in-out infinite; }
 .particle-stage.typing .orbit-a,
-.chat-scene.typing .orbit-a { animation-duration: 3.2s; }
+.chat-view.typing .orbit-a { animation-duration: 8s; }
 .particle-stage.typing .orbit-b,
-.chat-scene.typing .orbit-b { animation-duration: 2.4s; }
+.chat-view.typing .orbit-b { animation-duration: 6s; }
 .particle-stage.typing .orbit-c,
-.chat-scene.typing .orbit-c { animation-duration: 2.8s; }
+.chat-view.typing .orbit-c { animation-duration: 7s; }
+.chat-view.typing .orbit-d { animation-duration: 15s; }
 .particle-stage.typing .particle,
-.chat-scene.typing .particle { animation-duration: 3.2s; }
+.chat-view.typing .particle { animation-duration: 3.8s; }
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
