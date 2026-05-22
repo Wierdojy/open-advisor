@@ -2,19 +2,22 @@ const localApiHosts = new Set(['localhost', '127.0.0.1', '::1']);
 const apiBase = localApiHosts.has(window.location.hostname)
   ? `${window.location.protocol}//${window.location.hostname}:3001`
   : null;
+
 const viewMeta = {
-  overview: { code: '00', label: 'Digest', icon: 'insights' },
-  portfolio: { code: '01', label: 'Portfolio', icon: 'account_balance_wallet' },
-  themes: { code: '02', label: 'Themes', icon: 'grid_view' },
-  events: { code: '03', label: 'Follow-up', icon: 'event_available' },
-  research: { code: '04', label: 'Research', icon: 'auto_awesome' }
+  dashboard: { code: '01', label: 'Dashboard', icon: 'dashboard' },
+  inbox: { code: '02', label: 'Inbox', icon: 'inbox' },
+  research: { code: '03', label: 'Research', icon: 'query_stats' },
+  chat: { code: '04', label: 'Chat', icon: 'forum' }
 };
 const views = Object.keys(viewMeta);
 
 let state = null;
-let currentView = 'overview';
+let currentView = 'dashboard';
 let isDemoMode = false;
 const demoStorageKey = 'openAdvisorPagesState';
+const uiStorageKey = 'openAdvisorUiState';
+let uiState = null;
+let chatTypingTimer = null;
 
 function demoBootstrapUrl() {
   const buildVersion = window.OPEN_ADVISOR_BUILD;
@@ -23,6 +26,10 @@ function demoBootstrapUrl() {
 
 function el(id) {
   return document.getElementById(id);
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 function titleCase(value) {
@@ -42,72 +49,6 @@ function formatCurrency(value) {
     currency: 'USD',
     maximumFractionDigits: 0
   }).format(Number(value || 0));
-}
-
-function notesFor(targetType, targetId) {
-  return (state.notes || []).filter((note) => note.targetType === targetType && note.targetId === targetId);
-}
-
-function notesMarkup(targetType, targetId, placeholder) {
-  const notes = notesFor(targetType, targetId);
-  return `
-    <div class="detail-block">
-      <div class="panel-label">Notes</div>
-      ${
-        notes.length
-          ? `<div class="split-list">${notes
-              .map(
-                (note) => `
-                  <article class="list-item">
-                    <div class="list-row">
-                      <strong class="list-title">Working note</strong>
-                      <button class="button button-ghost small delete-note" data-id="${note.id}">Delete</button>
-                    </div>
-                    <div class="item-text">${note.body}</div>
-                    <div class="meta">${formatDate(note.createdAt)}</div>
-                  </article>
-                `
-              )
-              .join('')}</div>`
-          : `<div class="empty-state">No notes attached yet.</div>`
-      }
-      <form class="form-grid note-form" data-target-type="${targetType}" data-target-id="${targetId}">
-        <textarea class="textarea" name="body" placeholder="${placeholder}"></textarea>
-        <div class="form-actions">
-          <button class="button small" type="submit">Save note</button>
-        </div>
-      </form>
-    </div>
-  `;
-}
-
-function renderNav() {
-  el('nav').innerHTML = views
-    .map((view) => {
-      const meta = viewMeta[view];
-      return `
-        <button class="nav-item ${currentView === view ? 'active' : ''}" data-view="${view}" aria-label="${meta.label}">
-            <span class="nav-code">${meta.code}</span>
-            <span class="nav-label">${meta.label}</span>
-        </button>
-      `;
-    })
-    .join('');
-
-  document.querySelectorAll('[data-view]').forEach((button) => {
-    button.onclick = () => setView(button.dataset.view);
-  });
-}
-
-function setView(view) {
-  currentView = view;
-  document.querySelectorAll('.view').forEach((section) => section.classList.remove('active-view'));
-  el(`view-${view}`).classList.add('active-view');
-  renderNav();
-}
-
-function clone(value) {
-  return JSON.parse(JSON.stringify(value));
 }
 
 function makeId(prefix) {
@@ -132,181 +73,78 @@ function sortByDateDesc(items, key) {
   return [...items].sort((a, b) => new Date(b[key] || 0) - new Date(a[key] || 0));
 }
 
-function getMap(items) {
-  return new Map((items || []).map((item) => [item.id, item]));
-}
-
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function getMap(items) {
+  return new Map((items || []).map((item) => [item.id, item]));
 }
 
 function priorityRank(priority) {
   return { critical: 0, high: 1, normal: 2, low: 3 }[priority] ?? 4;
 }
 
-function decorateEvent(baseState, event) {
-  const assetMap = getMap(baseState.assets || []);
-  const themeMap = getMap(baseState.themes || []);
-  const adapterMap = getMap(baseState.sourceAdapters || []);
-  const reportMap = getMap(baseState.researchReports || []);
-  const enrichment = (baseState.eventEnrichments || [])
-    .filter((item) => item.eventId === event.id)
-    .sort((a, b) => new Date(b.freshnessAt || 0) - new Date(a.freshnessAt || 0))[0];
+function priorityClass(priority) {
+  return `priority-${priority || 'normal'}`;
+}
+
+function parseSymbols(value) {
+  return String(value || '')
+    .split(',')
+    .map((part) => part.trim().toUpperCase())
+    .filter(Boolean)
+    .map((symbol) => ({ symbol, name: symbol, assetType: 'equity' }));
+}
+
+function assetById(id) {
+  return (state.assets || []).find((asset) => asset.id === id);
+}
+
+function themeById(id) {
+  return (state.themes || []).find((theme) => theme.id === id);
+}
+
+function eventById(id) {
+  return (state.canonicalEvents || []).find((item) => item.id === id);
+}
+
+function loadUiState() {
+  const raw = localStorage.getItem(uiStorageKey);
+  const base = raw ? JSON.parse(raw) : {};
+  const threads = Array.isArray(base.chat?.threads) && base.chat.threads.length
+    ? base.chat.threads
+    : [{
+        id: 'thread_main',
+        title: 'Market overview',
+        messages: [{
+          id: makeId('msg'),
+          role: 'assistant',
+          body: 'I can help connect your holdings, watchlist, and beliefs into actionable monitoring. Ask about a stock, thesis, or catalyst.',
+          createdAt: nowIso()
+        }]
+      }];
 
   return {
-    ...event,
-    asset: event.assetId ? assetMap.get(event.assetId) || null : null,
-    theme: event.themeId ? themeMap.get(event.themeId) || null : null,
-    sourceAdapter: event.sourceAdapterId ? adapterMap.get(event.sourceAdapterId) || null : null,
-    enrichment: enrichment
-      ? {
-          ...enrichment,
-          report: enrichment.reportId ? reportMap.get(enrichment.reportId) || null : null
-        }
-      : null
+    settings: {
+      displayName: base.settings?.displayName || 'Open Advisor',
+      notifications: base.settings?.notifications ?? true,
+      priceAlerts: base.settings?.priceAlerts ?? true,
+      ipoAlerts: base.settings?.ipoAlerts ?? true,
+      compactMode: base.settings?.compactMode ?? false
+    },
+    inboxTag: base.inboxTag || 'all',
+    researchQuery: base.researchQuery || '',
+    chat: {
+      threads,
+      activeThreadId: base.chat?.activeThreadId || threads[0].id,
+      isTyping: false
+    }
   };
 }
 
-function buildPortfolioSummary(baseState) {
-  const trackedAssetIds = unique([
-    ...(baseState.holdings || []).map((holding) => holding.assetId),
-    ...(baseState.watchlists || []).flatMap((watchlist) => watchlist.itemAssetIds || []),
-    ...(baseState.themes || []).flatMap((theme) => theme.assetIds || [])
-  ]);
-
-  const estimatedBasis = (baseState.holdings || []).reduce((total, holding) => {
-    const basis = holding.costBasis != null ? Number(holding.costBasis) : 0;
-    const quantity = holding.quantity != null ? Number(holding.quantity) : 0;
-    return total + basis * quantity;
-  }, 0);
-
-  return {
-    holdingsCount: (baseState.holdings || []).length,
-    watchlistsCount: (baseState.watchlists || []).length,
-    activeThemesCount: (baseState.themes || []).filter((theme) => theme.status === 'active').length,
-    trackedAssetsCount: trackedAssetIds.length,
-    canonicalEventsCount: (baseState.canonicalEvents || []).length,
-    openRemindersCount: (baseState.reminders || []).filter((reminder) => reminder.state === 'open').length,
-    estimatedCostBasis: estimatedBasis
-  };
-}
-
-function buildInbox(baseState) {
-  const decoratedEvents = new Map((baseState.canonicalEvents || []).map((event) => [event.id, decorateEvent(baseState, event)]));
-
-  return [...(baseState.inboxItems || [])]
-    .map((item) => ({
-      ...item,
-      event: decoratedEvents.get(item.eventId) || null
-    }))
-    .sort((a, b) => {
-      const priorityDiff = priorityRank(a.priority) - priorityRank(b.priority);
-      if (priorityDiff !== 0) return priorityDiff;
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    });
-}
-
-function buildDigest(baseState) {
-  const inbox = buildInbox(baseState).filter((item) => item.state !== 'archived');
-  const topItems = inbox.slice(0, 5);
-  const openReminders = sortByDate((baseState.reminders || []).filter((item) => item.state === 'open'), 'dueAt').slice(0, 5);
-  const recentResearch = sortByDateDesc(baseState.researchJobs || [], 'createdAt')
-    .slice(0, 3)
-    .map((job) => ({
-      ...job,
-      report: (baseState.researchReports || []).find((report) => report.jobId === job.id) || null
-    }));
-
-  return {
-    date: new Date().toISOString().slice(0, 10),
-    title: 'What happened, why it matters, and what to check next.',
-    summary: `${topItems.length} digest items, ${openReminders.length} open reminders, and ${recentResearch.length} recent research passes across ${(baseState.themes || []).filter((theme) => theme.status === 'active').length} active themes.`,
-    topItems: topItems.map((item) => ({
-      id: item.id,
-      priority: item.priority,
-      title: item.event?.title || 'Untitled event',
-      factualSummary: item.event?.factualSummary || '',
-      whyItMatters: item.event?.enrichment?.summary || item.reason,
-      sourceTier: item.event?.sourceTier || 'tier_4',
-      confidence: item.event?.enrichment?.confidence ?? null,
-      freshnessAt: item.event?.enrichment?.freshnessAt || item.event?.recordedAt || null,
-      nextStep: item.nextStep,
-      relatedAsset: item.event?.asset || null,
-      relatedTheme: item.event?.theme || null
-    })),
-    openReminders,
-    researchSuggestions: (baseState.themes || [])
-      .filter((theme) => theme.status === 'active')
-      .slice(0, 3)
-      .map((theme) => ({
-        themeId: theme.id,
-        prompt: `Research ${theme.title} for new confirming or disconfirming signals.`
-      })),
-    recentResearch: recentResearch.map((job) => ({
-      id: job.id,
-      question: job.question,
-      status: job.status,
-      reportSummary: job.report ? job.report.summary : null
-    }))
-  };
-}
-
-function buildCalendar(baseState) {
-  return sortByDate(baseState.canonicalEvents || [], 'scheduledFor').map((event) => decorateEvent(baseState, event));
-}
-
-function buildResearchWorkspace(baseState) {
-  const sourcesByReportId = new Map();
-  for (const source of baseState.researchSources || []) {
-    const list = sourcesByReportId.get(source.reportId) || [];
-    list.push(source);
-    sourcesByReportId.set(source.reportId, list);
-  }
-
-  const claimsByReportId = new Map();
-  for (const claim of baseState.researchClaims || []) {
-    const list = claimsByReportId.get(claim.reportId) || [];
-    list.push(claim);
-    claimsByReportId.set(claim.reportId, list);
-  }
-
-  return sortByDateDesc(baseState.researchJobs || [], 'createdAt').map((job) => {
-    const report = (baseState.researchReports || []).find((item) => item.jobId === job.id) || null;
-    return {
-      ...job,
-      report: report
-        ? {
-            ...report,
-            sources: sourcesByReportId.get(report.id) || [],
-            claims: claimsByReportId.get(report.id) || []
-          }
-        : null
-    };
-  });
-}
-
-function buildSourceHealth(baseState) {
-  return sortByDateDesc(baseState.sourceAdapters || [], 'lastSyncedAt');
-}
-
-function buildAuditTrail(baseState) {
-  return sortByDateDesc(baseState.auditLog || [], 'createdAt').slice(0, 20);
-}
-
-function deriveClientState(baseState) {
-  const next = clone(baseState);
-  next.theses = next.themes;
-  next.alerts = next.reminders;
-  next.catalysts = next.canonicalEvents;
-  next.researchRuns = next.researchReports;
-  next.portfolioSummary = buildPortfolioSummary(next);
-  next.inbox = buildInbox(next);
-  next.digest = buildDigest(next);
-  next.calendar = buildCalendar(next);
-  next.researchWorkspace = buildResearchWorkspace(next);
-  next.sourceHealth = buildSourceHealth(next);
-  next.auditTrail = buildAuditTrail(next);
-  return next;
+function saveUiState() {
+  localStorage.setItem(uiStorageKey, JSON.stringify(uiState));
 }
 
 function loadStoredDemoState() {
@@ -352,6 +190,107 @@ function ensureDemoAsset(rawState, input) {
   };
   rawState.assets.push(asset);
   return asset;
+}
+
+function decorateEvent(baseState, event) {
+  const assetMap = getMap(baseState.assets || []);
+  const themeMap = getMap(baseState.themes || []);
+  const adapterMap = getMap(baseState.sourceAdapters || []);
+  const reportMap = getMap(baseState.researchReports || []);
+  const enrichment = (baseState.eventEnrichments || [])
+    .filter((item) => item.eventId === event.id)
+    .sort((a, b) => new Date(b.freshnessAt || 0) - new Date(a.freshnessAt || 0))[0];
+
+  return {
+    ...event,
+    asset: event.assetId ? assetMap.get(event.assetId) || null : null,
+    theme: event.themeId ? themeMap.get(event.themeId) || null : null,
+    sourceAdapter: event.sourceAdapterId ? adapterMap.get(event.sourceAdapterId) || null : null,
+    enrichment: enrichment
+      ? {
+          ...enrichment,
+          report: enrichment.reportId ? reportMap.get(enrichment.reportId) || null : null
+        }
+      : null
+  };
+}
+
+function buildInbox(baseState) {
+  const decoratedEvents = new Map((baseState.canonicalEvents || []).map((event) => [event.id, decorateEvent(baseState, event)]));
+
+  return [...(baseState.inboxItems || [])]
+    .map((item) => ({
+      ...item,
+      event: decoratedEvents.get(item.eventId) || null
+    }))
+    .sort((a, b) => {
+      const priorityDiff = priorityRank(a.priority) - priorityRank(b.priority);
+      if (priorityDiff !== 0) return priorityDiff;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+}
+
+function buildResearchWorkspace(baseState) {
+  const sourcesByReportId = new Map();
+  for (const source of baseState.researchSources || []) {
+    const list = sourcesByReportId.get(source.reportId) || [];
+    list.push(source);
+    sourcesByReportId.set(source.reportId, list);
+  }
+
+  const claimsByReportId = new Map();
+  for (const claim of baseState.researchClaims || []) {
+    const list = claimsByReportId.get(claim.reportId) || [];
+    list.push(claim);
+    claimsByReportId.set(claim.reportId, list);
+  }
+
+  return sortByDateDesc(baseState.researchJobs || [], 'createdAt').map((job) => {
+    const report = (baseState.researchReports || []).find((item) => item.jobId === job.id) || null;
+    return {
+      ...job,
+      report: report
+        ? {
+            ...report,
+            sources: sourcesByReportId.get(report.id) || [],
+            claims: claimsByReportId.get(report.id) || []
+          }
+        : null
+    };
+  });
+}
+
+function buildPortfolioSummary(baseState) {
+  const trackedAssetIds = unique([
+    ...(baseState.holdings || []).map((holding) => holding.assetId),
+    ...(baseState.watchlists || []).flatMap((watchlist) => watchlist.itemAssetIds || []),
+    ...(baseState.themes || []).flatMap((theme) => theme.assetIds || [])
+  ]);
+
+  const estimatedBasis = (baseState.holdings || []).reduce((total, holding) => {
+    const basis = holding.costBasis != null ? Number(holding.costBasis) : 0;
+    const quantity = holding.quantity != null ? Number(holding.quantity) : 0;
+    return total + basis * quantity;
+  }, 0);
+
+  return {
+    holdingsCount: (baseState.holdings || []).length,
+    trackedAssetsCount: trackedAssetIds.length,
+    openRemindersCount: (baseState.reminders || []).filter((reminder) => reminder.state === 'open').length,
+    estimatedCostBasis: estimatedBasis
+  };
+}
+
+function deriveClientState(baseState) {
+  const next = clone(baseState);
+  next.theses = next.themes;
+  next.alerts = next.reminders;
+  next.catalysts = next.canonicalEvents;
+  next.researchRuns = next.researchReports;
+  next.portfolioSummary = buildPortfolioSummary(next);
+  next.inbox = buildInbox(next);
+  next.researchWorkspace = buildResearchWorkspace(next);
+  return next;
 }
 
 function createDemoResearch(rawState, body) {
@@ -422,7 +361,6 @@ function createDemoResearch(rawState, body) {
 function cleanupDemoResource(rawState, resource, id) {
   if (resource === 'themes') {
     rawState.canonicalEvents = rawState.canonicalEvents.map((event) => (event.themeId === id ? { ...event, themeId: null } : event));
-    rawState.inboxItems = rawState.inboxItems.filter((item) => item.event?.themeId !== id);
   }
   if (resource === 'events') {
     rawState.inboxItems = rawState.inboxItems.filter((item) => item.eventId !== id);
@@ -433,13 +371,6 @@ function cleanupDemoResource(rawState, resource, id) {
     rawState.researchSources = rawState.researchSources.filter((source) => !reportIds.includes(source.reportId));
     rawState.researchClaims = rawState.researchClaims.filter((claim) => !reportIds.includes(claim.reportId));
     rawState.researchJobs = rawState.researchJobs.filter((job) => job.relatedEventId !== id);
-  }
-  if (resource === 'research-jobs') {
-    const reportIds = rawState.researchReports.filter((report) => report.jobId === id).map((report) => report.id);
-    rawState.researchReports = rawState.researchReports.filter((report) => report.jobId !== id);
-    rawState.researchSources = rawState.researchSources.filter((source) => !reportIds.includes(source.reportId));
-    rawState.researchClaims = rawState.researchClaims.filter((claim) => !reportIds.includes(claim.reportId));
-    rawState.eventEnrichments = rawState.eventEnrichments.filter((entry) => !reportIds.includes(entry.reportId));
   }
 }
 
@@ -456,19 +387,17 @@ async function demoMutate(path, body = {}, method = 'POST') {
 
   if (path === '/v1/holdings' && method === 'POST') {
     const asset = ensureDemoAsset(rawState, body);
-    const holding = {
+    rawState.holdings.push({
       id: makeId('holding'),
       assetId: asset.id,
       quantity: Number(body.quantity || 0),
       costBasis: body.costBasis != null && body.costBasis !== '' ? Number(body.costBasis) : null,
       sourceType: body.sourceType || 'manual'
-    };
-    rawState.holdings.push(holding);
-    logAudit(rawState, 'holding_created', 'holding', holding.id, `Added holding for ${asset.symbol || asset.name}.`);
+    });
   } else if (path === '/v1/watchlists' && method === 'POST') {
     const watchlist = {
       id: makeId('watchlist'),
-      name: body.name || 'Untitled Watchlist',
+      name: body.name || 'Watchlist',
       description: body.description || '',
       itemAssetIds: []
     };
@@ -477,7 +406,6 @@ async function demoMutate(path, body = {}, method = 'POST') {
       if (!watchlist.itemAssetIds.includes(asset.id)) watchlist.itemAssetIds.push(asset.id);
     }
     rawState.watchlists.push(watchlist);
-    logAudit(rawState, 'watchlist_created', 'watchlist', watchlist.id, `Created watchlist ${watchlist.name}.`);
   } else if ((path === '/v1/themes' || path === '/v1/theses') && method === 'POST') {
     const theme = {
       id: makeId('theme'),
@@ -493,60 +421,16 @@ async function demoMutate(path, body = {}, method = 'POST') {
       if (!theme.assetIds.includes(asset.id)) theme.assetIds.push(asset.id);
     }
     rawState.themes.push(theme);
-    logAudit(rawState, 'theme_created', 'theme', theme.id, `Created theme ${theme.title}.`);
-  } else if ((path === '/v1/events' || path === '/v1/canonical-events' || path === '/v1/catalysts') && method === 'POST') {
-    const asset = body.assetId || body.symbol || body.name ? ensureDemoAsset(rawState, body) : null;
-    const event = {
-      id: makeId('event'),
-      eventType: body.eventType || body.type || 'custom',
-      title: body.title || 'Untitled Event',
-      factualSummary: body.factualSummary || body.reason || '',
-      recordedAt: body.recordedAt || nowIso(),
-      scheduledFor: body.scheduledFor || nowIso(),
-      assetId: asset ? asset.id : body.assetId || null,
-      themeId: body.themeId || body.thesisId || null,
-      sourceAdapterId: body.sourceAdapterId || null,
-      sourceLabel: body.sourceLabel || 'Manual entry',
-      sourceTier: body.sourceTier || 'tier_2',
-      importance: body.importance || 'normal',
-      truthStatus: body.truthStatus || 'confirmed'
-    };
-    rawState.canonicalEvents.push(event);
-    rawState.inboxItems.unshift({
-      id: makeId('inbox'),
-      eventId: event.id,
-      state: 'new',
-      priority: body.priority || (event.importance === 'critical' ? 'critical' : event.importance === 'high' ? 'high' : 'normal'),
-      reason: body.reason || event.factualSummary,
-      nextStep: body.nextStep || 'Decide whether this needs research or a reminder.',
-      createdAt: nowIso(),
-      deliveryKind: 'in_app'
-    });
-    logAudit(rawState, 'event_created', 'event', event.id, `Recorded canonical event ${event.title}.`);
-  } else if ((path === '/v1/reminders' || path === '/v1/alerts') && method === 'POST') {
-    const reminder = {
-      id: makeId('reminder'),
-      title: body.title || 'Untitled Reminder',
-      state: body.state || 'open',
-      dueAt: body.dueAt || body.scheduledFor || nowIso(),
-      relatedType: body.relatedType || 'event',
-      relatedId: body.relatedId || body.eventId || null,
-      note: body.note || body.message || ''
-    };
-    rawState.reminders.push(reminder);
-    logAudit(rawState, 'reminder_created', 'reminder', reminder.id, `Created reminder ${reminder.title}.`);
   } else if ((path === '/v1/research-jobs' || path === '/v1/research-runs') && method === 'POST') {
     createDemoResearch(rawState, body);
   } else if (path === '/v1/notes' && method === 'POST') {
-    const note = {
+    rawState.notes.unshift({
       id: makeId('note'),
       targetType: body.targetType || 'theme',
       targetId: body.targetId || null,
       body: body.body || '',
       createdAt: nowIso()
-    };
-    rawState.notes.unshift(note);
-    logAudit(rawState, 'note_created', 'note', note.id, `Added note on ${note.targetType}.`);
+    });
   } else if (path.match(/^\/v1\/inbox-items\/[^/]+\/seen$/) && method === 'POST') {
     const id = path.split('/')[3];
     const item = rawState.inboxItems.find((entry) => entry.id === id);
@@ -555,28 +439,6 @@ async function demoMutate(path, body = {}, method = 'POST') {
     const id = path.split('/')[3];
     const item = rawState.inboxItems.find((entry) => entry.id === id);
     if (item) item.state = 'archived';
-  } else if (path.match(/^\/v1\/reminders\/[^/]+\/done$/) && method === 'POST') {
-    const id = path.split('/')[3];
-    const reminder = rawState.reminders.find((entry) => entry.id === id);
-    if (reminder) reminder.state = 'done';
-  } else if (path.match(/^\/v1\/reminders\/[^/]+\/snooze$/) && method === 'POST') {
-    const id = path.split('/')[3];
-    const reminder = rawState.reminders.find((entry) => entry.id === id);
-    if (reminder) {
-      reminder.state = 'snoozed';
-      reminder.dueAt = body.dueAt || addDays(nowIso(), 1);
-    }
-  } else if (path.match(/^\/v1\/alerts\/[^/]+\/seen$/) && method === 'POST') {
-    const id = path.split('/')[3];
-    const reminder = rawState.reminders.find((entry) => entry.id === id);
-    if (reminder) reminder.state = 'done';
-  } else if (path.match(/^\/v1\/alerts\/[^/]+\/snooze$/) && method === 'POST') {
-    const id = path.split('/')[3];
-    const reminder = rawState.reminders.find((entry) => entry.id === id);
-    if (reminder) {
-      reminder.state = 'snoozed';
-      reminder.dueAt = body.snoozedUntil || addDays(nowIso(), 1);
-    }
   } else if (method === 'DELETE') {
     const match = path.match(/^\/v1\/(holdings|watchlists|themes|events|canonical-events|catalysts|reminders|alerts|research-jobs|research-runs|notes)\/([^/]+)$/);
     if (match) {
@@ -596,7 +458,6 @@ async function demoMutate(path, body = {}, method = 'POST') {
       };
       removeById(rawState[keyMap[resource]], id);
       cleanupDemoResource(rawState, resource, id);
-      logAudit(rawState, 'resource_deleted', resource, id, `Deleted ${resource} ${id}.`);
     }
   }
 
@@ -605,17 +466,13 @@ async function demoMutate(path, body = {}, method = 'POST') {
 }
 
 async function jsonFetch(path, options = {}) {
-  if (!apiBase) {
-    throw new Error('Local API unavailable');
-  }
+  if (!apiBase) throw new Error('Local API unavailable');
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 1500);
   try {
     const response = await fetch(`${apiBase}${path}`, { ...options, signal: controller.signal });
     const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || `Request failed: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(payload.error || `Request failed: ${response.status}`);
     return payload;
   } finally {
     window.clearTimeout(timeoutId);
@@ -636,362 +493,248 @@ async function del(path) {
   return jsonFetch(path, { method: 'DELETE' });
 }
 
-function assetById(id) {
-  return (state.assets || []).find((asset) => asset.id === id);
+function hashCode(value) {
+  return String(value || 'asset').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
 }
 
-function themeById(id) {
-  return (state.themes || []).find((theme) => theme.id === id);
+function performanceForAsset(asset, index = 0) {
+  const seed = hashCode(asset?.symbol || asset?.name || index);
+  const delta = ((seed % 180) - 90) / 10;
+  const change = Number(delta.toFixed(1));
+  const positive = change >= 0;
+  const points = Array.from({ length: 14 }, (_, pointIndex) => {
+    const wave = Math.sin((seed + pointIndex * 13) / 11) * 18;
+    const slope = positive ? pointIndex * 1.6 : (13 - pointIndex) * 1.6;
+    return Math.max(8, Math.min(92, 52 + wave + (positive ? slope : -slope)));
+  });
+  return {
+    change,
+    positive,
+    price: (seed % 320) + 24,
+    points
+  };
 }
 
-function eventById(id) {
-  return (state.canonicalEvents || []).find((item) => item.id === id);
+function sparklineSvg(points, positive) {
+  const coords = points.map((point, index) => `${index * 12},${100 - point}`).join(' ');
+  return `
+    <svg class="sparkline" viewBox="0 0 156 100" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="${coords}" fill="none" stroke="${positive ? '#1b8f4d' : '#c63b3b'}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></polyline>
+    </svg>
+  `;
 }
 
-function parseSymbols(value) {
-  return String(value || '')
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((symbol) => ({ symbol, name: symbol, assetType: 'equity' }));
+function stockCardMarkup(asset, performance, status, controls = '') {
+  return `
+    <article class="stock-card ${performance.positive ? 'stock-up' : 'stock-down'}">
+      <div class="list-row align-center">
+        <div>
+          <div class="list-title">${asset.symbol || asset.name || 'Asset'}</div>
+          <div class="meta">${asset.name || 'Unnamed asset'} · ${status}</div>
+        </div>
+        <div class="trend-pill ${performance.positive ? 'positive' : 'negative'}">${performance.positive ? '+' : ''}${performance.change}%</div>
+      </div>
+      <div class="stock-price-row">
+        <div class="price-stack">
+          <div class="price-value">${formatCurrency(performance.price)}</div>
+          <div class="meta">1D performance</div>
+        </div>
+        ${sparklineSvg(performance.points, performance.positive)}
+      </div>
+      ${controls ? `<div class="inline-actions">${controls}</div>` : ''}
+    </article>
+  `;
 }
 
-function priorityClass(priority) {
-  return `priority-${priority || 'normal'}`;
+function getDashboardData() {
+  const holdings = (state.holdings || []).map((holding, index) => ({
+    holding,
+    asset: assetById(holding.assetId) || { name: 'Unknown asset' },
+    performance: performanceForAsset(assetById(holding.assetId), index)
+  }));
+  const ownedIds = new Set(holdings.map((item) => item.asset.id));
+  const watchlistIds = unique((state.watchlists || []).flatMap((watchlist) => watchlist.itemAssetIds || [])).filter((id) => !ownedIds.has(id));
+  const watchlistAssets = watchlistIds.map((id, index) => ({
+    asset: assetById(id) || { name: 'Unknown asset' },
+    performance: performanceForAsset(assetById(id), index + 100)
+  }));
+  return { holdings, watchlistAssets };
 }
 
-function overviewCards() {
-  return state.inbox
-    .map((item) => {
-      const event = item.event || {};
-      const report = event.enrichment?.report;
+function getIdentityTags() {
+  return unique((state.themes || []).map((theme) => theme.title));
+}
+
+function tagsForInboxItem(item) {
+  const tags = [];
+  if (item.event?.theme?.title) tags.push(item.event.theme.title);
+  const assetThemes = (state.themes || []).filter((theme) => (theme.assetIds || []).includes(item.event?.assetId));
+  assetThemes.forEach((theme) => tags.push(theme.title));
+  return unique(tags);
+}
+
+function getResearchResults(query) {
+  const normalized = String(query || '').trim().toLowerCase();
+  const { holdings, watchlistAssets } = getDashboardData();
+  const assets = [...holdings.map((item) => item.asset), ...watchlistAssets.map((item) => item.asset)];
+  const directMatch = assets.find((asset) => [asset.symbol, asset.name].filter(Boolean).some((value) => value.toLowerCase().includes(normalized)));
+  const reportMatch = (state.researchWorkspace || []).find((job) => (job.question || '').toLowerCase().includes(normalized));
+  const themeMatch = (state.themes || []).find((theme) => [theme.title, theme.summary, theme.hypothesis].filter(Boolean).some((value) => value.toLowerCase().includes(normalized)));
+
+  const fallback = directMatch || (themeMatch?.assetIds?.[0] ? assetById(themeMatch.assetIds[0]) : assets[0]);
+  if (!fallback) return null;
+  const performance = performanceForAsset(fallback, 7);
+
+  const bullets = [
+    directMatch ? `${directMatch.symbol || directMatch.name} is already tracked in your workspace.` : null,
+    themeMatch ? `Linked belief: ${themeMatch.title}.` : null,
+    reportMatch?.report?.summary || null,
+    `Simulated market pulse: ${performance.positive ? 'buyers are in control' : 'selling pressure is elevated'} over the last session.`
+  ].filter(Boolean);
+
+  const results = [
+    {
+      type: 'Data',
+      title: `${fallback.symbol || fallback.name} snapshot`,
+      body: `Price ${formatCurrency(performance.price)} · ${performance.positive ? '+' : ''}${performance.change}% · ${themeMatch ? 'belief-linked' : 'general coverage'}`
+    },
+    {
+      type: 'Graph',
+      title: 'Price performance',
+      body: sparklineSvg(performance.points, performance.positive),
+      rich: true
+    },
+    {
+      type: 'Web',
+      title: reportMatch?.report?.title || `${fallback.symbol || fallback.name} market context`,
+      body: reportMatch?.report?.summary || `Search results would blend live filings, trustworthy news, and identity-linked themes for ${fallback.symbol || fallback.name}.`
+    }
+  ];
+
+  return { asset: fallback, performance, bullets, results };
+}
+
+function getActiveThread() {
+  return uiState.chat.threads.find((thread) => thread.id === uiState.chat.activeThreadId) || uiState.chat.threads[0];
+}
+
+function renderNav() {
+  el('nav').innerHTML = views
+    .map((view) => {
+      const meta = viewMeta[view];
       return `
-        <article class="list-item">
-          <div class="list-row">
-            <div>
-              <div class="list-title">${event.title || 'Untitled event'}</div>
-              <div class="meta">${titleCase(item.state)} · ${formatDate(item.createdAt)}</div>
-            </div>
-            <span class="badge ${priorityClass(item.priority)}">${titleCase(item.priority)}</span>
-          </div>
-          <div class="item-stack">
-            <div class="item-text">${event.factualSummary || 'No deterministic fact recorded.'}</div>
-            <div class="detail-copy"><strong>Why it matters:</strong> ${event.enrichment?.summary || item.reason || 'No synthesis recorded yet.'}</div>
-            <div class="detail-copy"><strong>Sources:</strong> ${titleCase(event.sourceTier)} · ${event.sourceLabel || 'Unspecified'}</div>
-            <div class="detail-copy"><strong>Next:</strong> ${item.nextStep || 'No follow-up suggested yet.'}</div>
-            ${report ? `<div class="detail-copy"><strong>Freshness:</strong> ${formatDate(report.freshnessAt)} · Confidence ${Math.round(report.confidence * 100)}%</div>` : ''}
-          </div>
-          <div class="inline-actions">
-            <button class="button button-secondary small inbox-seen" data-id="${item.id}">Seen</button>
-            <button class="button button-ghost small inbox-archive" data-id="${item.id}">Archive</button>
-            <button class="button small launch-research" data-event-id="${event.id}">Research</button>
-          </div>
-        </article>
+        <button class="nav-item ${currentView === view ? 'active' : ''}" data-view="${view}" aria-label="${meta.label}">
+          <span class="nav-code">${meta.code}</span>
+          <span class="nav-label">${meta.label}</span>
+        </button>
       `;
     })
     .join('');
+
+  document.querySelectorAll('[data-view]').forEach((button) => {
+    button.onclick = () => setView(button.dataset.view);
+  });
 }
 
-
-function viewSummary(view) {
-  const activeDigestItems = state.inbox.filter((item) => item.state !== 'archived').length;
-  const summaries = {
-    overview: {
-      eyebrow: 'Today',
-      title: 'What matters now',
-      copy: state.digest.summary,
-      stats: [
-        ['Digest items', activeDigestItems],
-        ['Open reminders', state.portfolioSummary.openRemindersCount],
-        ['Recent research', state.digest.recentResearch.length]
-      ]
-    },
-    portfolio: {
-      eyebrow: 'Portfolio',
-      title: 'Holdings and watchlists',
-      copy: `${state.portfolioSummary.trackedAssetsCount} tracked assets across ${state.portfolioSummary.holdingsCount} holdings and ${state.portfolioSummary.watchlistsCount} watchlists.`,
-      stats: [
-        ['Cost basis', formatCurrency(state.portfolioSummary.estimatedCostBasis)],
-        ['Holdings', state.portfolioSummary.holdingsCount],
-        ['Watchlists', state.portfolioSummary.watchlistsCount]
-      ]
-    },
-    themes: {
-      eyebrow: 'Themes',
-      title: 'Investment theses',
-      copy: `${state.themes.filter((theme) => theme.status === 'active').length} active themes with hypotheses, monitoring plans, linked assets, and notes.`,
-      stats: [
-        ['Themes', state.themes.length],
-        ['Active', state.themes.filter((theme) => theme.status === 'active').length],
-        ['Notes', (state.notes || []).filter((note) => note.targetType === 'theme').length]
-      ]
-    },
-    events: {
-      eyebrow: 'Events',
-      title: 'Facts and follow-up',
-      copy: `${state.calendar.length} canonical events and ${state.reminders.length} reminders are available for review.`,
-      stats: [
-        ['Events', state.calendar.length],
-        ['Reminders', state.reminders.length],
-        ['Open', state.portfolioSummary.openRemindersCount]
-      ]
-    },
-    research: {
-      eyebrow: 'Research',
-      title: 'Research jobs and reports',
-      copy: `${state.researchWorkspace.length} research jobs with ${state.researchReports.length} attached reports. Research is demo-backed until providers are connected.`,
-      stats: [
-        ['Jobs', state.researchWorkspace.length],
-        ['Reports', state.researchReports.length],
-        ['Suggestions', state.digest.researchSuggestions.length]
-      ]
-    }
-  };
-  return summaries[view];
+function setView(view) {
+  currentView = view;
+  document.querySelectorAll('.view').forEach((section) => section.classList.remove('active-view'));
+  el(`view-${view}`).classList.add('active-view');
+  renderNav();
 }
 
-function renderViewHeader(view) {
-  const summary = viewSummary(view);
+function renderViewHeader(eyebrow, title, copy, stats) {
   return `
     <section class="view-header">
       <div>
-        <div class="eyebrow">${summary.eyebrow}</div>
-        <h2 class="view-title">${summary.title}</h2>
-        <p class="hero-summary">${summary.copy}</p>
+        <div class="eyebrow">${eyebrow}</div>
+        <h2 class="view-title">${title}</h2>
+        <p class="hero-summary">${copy}</p>
       </div>
       <div class="summary-grid">
-        ${summary.stats
-          .map(
-            ([label, value]) => `
-              <div class="summary-card">
-                <div class="panel-label">${label}</div>
-                <div class="summary-value">${value}</div>
-              </div>
-            `
-          )
-          .join('')}
+        ${stats.map(([label, value]) => `
+          <div class="summary-card">
+            <div class="panel-label">${label}</div>
+            <div class="summary-value">${value}</div>
+          </div>
+        `).join('')}
       </div>
     </section>
   `;
 }
 
-function renderOverview() {
-  const remindersHtml = state.reminders.length
-    ? state.reminders
-        .map(
-          (reminder) => `
-            <article class="list-item">
-              <div class="list-row">
-                <div>
-                  <div class="list-title">${reminder.title}</div>
-                  <div class="meta">${titleCase(reminder.state)} · due ${formatDate(reminder.dueAt)}</div>
-                </div>
-                <span class="badge">${titleCase(reminder.relatedType)}</span>
-              </div>
-              <div class="item-text">${reminder.note || 'No reminder note.'}</div>
-              <div class="inline-actions">
-                <button class="button button-secondary small reminder-done" data-id="${reminder.id}">Done</button>
-                <button class="button button-ghost small reminder-snooze" data-id="${reminder.id}">Snooze</button>
-              </div>
-            </article>
-          `
-        )
-        .join('')
-    : `<div class="empty-state">No reminders yet.</div>`;
+function renderDashboard() {
+  const { holdings, watchlistAssets } = getDashboardData();
+  const portfolioHtml = holdings.length
+    ? holdings.map(({ holding, asset, performance }) => stockCardMarkup(
+        asset,
+        performance,
+        'Owned',
+        `<button class="button button-ghost small move-to-watchlist" data-holding-id="${holding.id}">Move to watchlist</button>
+         <button class="button button-ghost small delete-holding" data-id="${holding.id}">Remove</button>`
+      )).join('')
+    : '<div class="empty-state">No owned positions yet.</div>';
 
-  const sourceHealthHtml = state.sourceHealth.length
-    ? state.sourceHealth
-        .map(
-          (adapter) => `
-            <div class="source-row">
-              <div>
-                <strong>${adapter.name}</strong>
-                <div class="meta">${titleCase(adapter.tier)} · ${titleCase(adapter.coverage)}</div>
-              </div>
-              <div class="meta">${titleCase(adapter.status)} · ${formatDate(adapter.lastSyncedAt)}</div>
-            </div>
-          `
-        )
-        .join('')
-    : `<div class="empty-state">No source adapters configured.</div>`;
+  const watchlistHtml = watchlistAssets.length
+    ? watchlistAssets.map(({ asset, performance }) => stockCardMarkup(
+        asset,
+        performance,
+        'Watching',
+        `<button class="button small move-to-portfolio" data-asset-id="${asset.id}">Move to portfolio</button>
+         <button class="button button-ghost small remove-from-watchlist" data-asset-id="${asset.id}">Remove</button>`
+      )).join('')
+    : '<div class="empty-state">No watchlist names yet.</div>';
 
-  const auditHtml = state.auditTrail.length
-    ? state.auditTrail
-        .map(
-          (entry) => `
-            <div class="audit-row">
-              <div>
-                <strong>${titleCase(entry.action)}</strong>
-                <div class="meta">${entry.entityType} · ${entry.entityId}</div>
-              </div>
-              <div class="meta">${formatDate(entry.createdAt)}</div>
-            </div>
-          `
-        )
-        .join('')
-    : `<div class="empty-state">No audit activity yet.</div>`;
-
-  el('view-overview').innerHTML = `
-    ${renderViewHeader('overview')}
-    <div class="view-grid" data-source-screen="Digest (Ethereal) - Exact Header Match">
-      <section class="panel span-7">
-        <div class="panel-header">
-          <div>
-            <div class="panel-label">Digest</div>
-            <h2 class="panel-title">${state.digest.title}</h2>
-            <p class="panel-copy">${state.digest.summary}</p>
-          </div>
-        </div>
-        <div class="list">${overviewCards() || '<div class="empty-state">No digest items yet.</div>'}</div>
-      </section>
-
-      <section class="panel span-5">
-        <div class="panel-header">
-          <div>
-            <div class="panel-label">Follow-up</div>
-            <h2 class="panel-title">Reminders</h2>
-          </div>
-        </div>
-        <div class="list">${remindersHtml}</div>
-      </section>
-
-      <section class="panel span-6">
-        <div class="panel-header">
-          <div>
-            <div class="panel-label">Configured sources</div>
-            <h2 class="panel-title">Source health</h2>
-          </div>
-        </div>
-        ${sourceHealthHtml}
-      </section>
-
-      <section class="panel span-6">
-        <div class="panel-header">
-          <div>
-            <div class="panel-label">Audit trail</div>
-            <h2 class="panel-title">Recent decisions</h2>
-          </div>
-        </div>
-        ${auditHtml}
-      </section>
-    </div>
-  `;
-}
-
-function renderPortfolio() {
-  const holdingsHtml = state.holdings.length
-    ? state.holdings
-        .map((holding) => {
-          const asset = assetById(holding.assetId) || {};
-          return `
-            <article class="list-item">
-              <div class="list-row">
-                <div>
-                  <div class="list-title">${asset.symbol || 'Unknown'} · ${asset.name || 'Unnamed asset'}</div>
-                  <div class="meta">${titleCase(asset.assetType)} · ${titleCase(holding.sourceType)}</div>
-                </div>
-                <button class="button button-ghost small delete-holding" data-id="${holding.id}">Delete</button>
-              </div>
-              <div class="meta-grid">
-                <div class="meta-card">
-                  <div class="meta">Quantity</div>
-                  <div class="value">${holding.quantity}</div>
-                </div>
-                <div class="meta-card">
-                  <div class="meta">Cost basis</div>
-                  <div class="value">${holding.costBasis != null ? formatCurrency(holding.costBasis) : 'None'}</div>
-                </div>
-              </div>
-            </article>
-          `;
-        })
-        .join('')
-    : `<div class="empty-state">No holdings in the deterministic core yet.</div>`;
-
-  const watchlistsHtml = state.watchlists.length
-    ? state.watchlists
-        .map(
-          (watchlist) => `
-            <article class="list-item">
-              <div class="list-row">
-                <div>
-                  <div class="list-title">${watchlist.name}</div>
-                  <div class="meta">${(watchlist.itemAssetIds || []).length} tracked names</div>
-                </div>
-                <button class="button button-ghost small delete-watchlist" data-id="${watchlist.id}">Delete</button>
-              </div>
-              <div class="item-text">${watchlist.description || 'No description.'}</div>
-              <div class="detail-copy">${(watchlist.itemAssetIds || []).map((id) => assetById(id)?.symbol).filter(Boolean).join(', ') || 'No symbols yet.'}</div>
-            </article>
-          `
-        )
-        .join('')
-    : `<div class="empty-state">No watchlists yet.</div>`;
-
-  el('view-portfolio').innerHTML = `
-    ${renderViewHeader('portfolio')}
-    <div class="view-grid" data-source-screen="Portfolio (Consolidated)">
-      <section class="panel span-7">
+  el('view-dashboard').innerHTML = `
+    ${renderViewHeader(
+      'Dashboard',
+      'Portfolio first, watchlist right below it',
+      'A calm market home for owned positions and names you want to track next. Green and red performance stays obvious, while moving names between lists stays one tap away.',
+      [
+        ['Portfolio', holdings.length],
+        ['Watchlist', watchlistAssets.length],
+        ['Cost basis', formatCurrency(state.portfolioSummary.estimatedCostBasis)]
+      ]
+    )}
+    <div class="view-grid">
+      <section class="panel">
         <div class="panel-header">
           <div>
             <div class="panel-label">Portfolio</div>
-            <h2 class="panel-title">Portfolio state</h2>
+            <h2 class="panel-title">Owned positions</h2>
           </div>
         </div>
-        <div class="meta-grid">
-          <div class="meta-card">
-            <div class="meta">Estimated cost basis</div>
-            <div class="value">${formatCurrency(state.portfolioSummary.estimatedCostBasis)}</div>
-          </div>
-          <div class="meta-card">
-            <div class="meta">Tracked assets</div>
-            <div class="value">${state.portfolioSummary.trackedAssetsCount}</div>
-          </div>
-        </div>
-        <div class="list">${holdingsHtml}</div>
+        <div class="list stock-list">${portfolioHtml}</div>
       </section>
 
-      <section class="panel span-5">
+      <section class="panel">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Watchlists</div>
-            <h2 class="panel-title">Watchlists</h2>
+            <div class="panel-label">Watchlist</div>
+            <h2 class="panel-title">Potential entries</h2>
           </div>
         </div>
-        <div class="list">${watchlistsHtml}</div>
+        <div class="list stock-list">${watchlistHtml}</div>
       </section>
 
-      <section class="form-card span-6">
+      <section class="form-card">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Add holding</div>
-            <h2 class="panel-title">New holding</h2>
+            <div class="panel-label">Add stock</div>
+            <h2 class="panel-title">Quick capture</h2>
           </div>
         </div>
-        <form id="holding-form" class="form-grid">
+        <form id="quick-add-form" class="form-grid two-up">
           <input class="field" name="symbol" placeholder="Symbol" required />
-          <input class="field" name="name" placeholder="Asset name" />
-          <input class="field" name="quantity" placeholder="Quantity" type="number" step="any" required />
-          <input class="field" name="costBasis" placeholder="Per-unit cost basis" type="number" step="any" />
+          <select class="select" name="destination">
+            <option value="portfolio">Portfolio</option>
+            <option value="watchlist">Watchlist</option>
+          </select>
+          <input class="field" name="name" placeholder="Company name" />
+          <input class="field" name="quantity" type="number" step="any" placeholder="Quantity if owned" />
+          <input class="field" name="costBasis" type="number" step="any" placeholder="Cost basis if owned" />
           <div class="form-actions">
-            <button class="button" type="submit">Add holding</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="form-card span-6">
-        <div class="panel-header">
-          <div>
-            <div class="panel-label">Create watchlist</div>
-            <h2 class="panel-title">New watchlist</h2>
-          </div>
-        </div>
-        <form id="watchlist-form" class="form-grid">
-          <input class="field" name="name" placeholder="Watchlist name" required />
-          <input class="field" name="description" placeholder="Description" />
-          <input class="field" name="symbols" placeholder="Comma-separated symbols" />
-          <div class="form-actions">
-            <button class="button" type="submit">Create watchlist</button>
+            <button class="button" type="submit">Add stock</button>
           </div>
         </form>
       </section>
@@ -999,342 +742,247 @@ function renderPortfolio() {
   `;
 }
 
-function renderThemes() {
-  const themesHtml = state.themes.length
-    ? state.themes
-        .map(
-          (theme) => `
-            <article class="panel span-12">
-              <div class="panel-header">
-                <div>
-                  <div class="panel-label">Theme</div>
-                  <h2 class="panel-title">${theme.title}</h2>
-                  <p class="panel-copy">${theme.summary || 'No summary yet.'}</p>
-                </div>
-                <div class="inline-actions">
-                  <span class="badge">${titleCase(theme.status)}</span>
-                  <button class="button button-ghost small delete-theme" data-id="${theme.id}">Delete</button>
-                </div>
-              </div>
-              <div class="meta-grid">
-                <div class="meta-card">
-                  <div class="meta">Hypothesis</div>
-                  <div class="value">${theme.hypothesis || 'None recorded.'}</div>
-                </div>
-                <div class="meta-card">
-                  <div class="meta">Monitoring plan</div>
-                  <div class="value">${theme.monitoringPlan || 'No plan yet.'}</div>
-                </div>
-                <div class="meta-card">
-                  <div class="meta">Linked assets</div>
-                  <div class="value">${(theme.assetIds || []).map((id) => assetById(id)?.symbol).filter(Boolean).join(', ') || 'No linked assets.'}</div>
-                </div>
-              </div>
-              <div class="inline-actions">
-                <button class="button small theme-research" data-id="${theme.id}" data-title="${theme.title}">Research theme</button>
-              </div>
-              ${notesMarkup('theme', theme.id, 'Add a working note for this theme')}
-            </article>
-          `
-        )
-        .join('')
-    : `<div class="empty-state">No themes defined yet.</div>`;
+function renderInbox() {
+  const tags = getIdentityTags();
+  const filterTag = uiState.inboxTag;
+  const items = state.inbox.filter((item) => item.state !== 'archived').filter((item) => filterTag === 'all' || tagsForInboxItem(item).includes(filterTag));
 
-  el('view-themes').innerHTML = `
-    ${renderViewHeader('themes')}
-    <div class="view-grid" data-source-screen="Theme Artifact Mobile">
-      <section class="span-7">
-        <div class="view-grid">${themesHtml}</div>
-      </section>
-
-      <section class="form-card span-5">
+  el('view-inbox').innerHTML = `
+    ${renderViewHeader(
+      'Inbox',
+      'Identity-linked market feed',
+      'Curated articles arrive in response to market changes, then get tagged against your beliefs so the feed reflects what you actually care about.',
+      [
+        ['Unread', state.inbox.filter((item) => item.state === 'new').length],
+        ['Beliefs', tags.length],
+        ['Filtered by', filterTag === 'all' ? 'All' : filterTag]
+      ]
+    )}
+    <div class="view-grid">
+      <section class="panel">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Create theme</div>
-            <h2 class="panel-title">Create theme</h2>
+            <div class="panel-label">Identity system</div>
+            <h2 class="panel-title">Beliefs and themes</h2>
+            <p class="panel-copy">These beliefs shape what gets surfaced and how incoming articles are labeled.</p>
           </div>
         </div>
-        <form id="theme-form" class="form-grid">
-          <input class="field" name="title" placeholder="Theme title" required />
-          <textarea class="textarea" name="summary" placeholder="Short summary"></textarea>
-          <textarea class="textarea" name="hypothesis" placeholder="Why you think this matters"></textarea>
-          <textarea class="textarea" name="monitoringPlan" placeholder="What would confirm or challenge it"></textarea>
+        <div class="chip-row">
+          <button class="chip ${filterTag === 'all' ? 'active' : ''}" data-inbox-tag="all">All</button>
+          ${tags.map((tag) => `<button class="chip ${filterTag === tag ? 'active' : ''}" data-inbox-tag="${tag}">${tag}</button>`).join('')}
+        </div>
+        <div class="list belief-list">
+          ${(state.themes || []).map((theme) => `
+            <article class="belief-card">
+              <div class="list-row">
+                <div>
+                  <div class="list-title">${theme.title}</div>
+                  <div class="meta">${titleCase(theme.status)} belief</div>
+                </div>
+                <span class="badge">${(theme.assetIds || []).length} assets</span>
+              </div>
+              <div class="item-text">${theme.summary || theme.hypothesis || 'No summary yet.'}</div>
+            </article>
+          `).join('') || '<div class="empty-state">No beliefs yet.</div>'}
+        </div>
+        <form id="belief-form" class="form-grid">
+          <input class="field" name="title" placeholder="Belief or theme" required />
+          <textarea class="textarea" name="summary" placeholder="What do you believe and why?"></textarea>
           <input class="field" name="symbols" placeholder="Linked symbols comma-separated" />
           <div class="form-actions">
-            <button class="button" type="submit">Create theme</button>
+            <button class="button" type="submit">Add belief</button>
           </div>
         </form>
       </section>
-    </div>
-  `;
-}
 
-function renderEvents() {
-  const eventsHtml = state.calendar.length
-    ? state.calendar
-        .map(
-          (event) => `
-            <article class="list-item">
-              <div class="list-row">
-                <div>
-                  <div class="list-title">${event.title}</div>
-                  <div class="meta">${titleCase(event.eventType)} · ${formatDate(event.scheduledFor)}</div>
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-label">Curated articles</div>
+            <h2 class="panel-title">Real-time article feed</h2>
+          </div>
+        </div>
+        <div class="list">
+          ${items.map((item) => {
+            const event = item.event || {};
+            const beliefTags = tagsForInboxItem(item);
+            return `
+              <article class="list-item">
+                <div class="list-row">
+                  <div>
+                    <div class="list-title">${event.title || 'Untitled article'}</div>
+                    <div class="meta">${formatDate(item.createdAt)} · ${titleCase(item.priority)}</div>
+                  </div>
+                  <span class="badge ${priorityClass(item.priority)}">${titleCase(item.priority)}</span>
+                </div>
+                <div class="item-stack">
+                  <div class="item-text">${event.factualSummary || item.reason || 'No summary recorded yet.'}</div>
+                  <div class="detail-copy">${event.enrichment?.summary || 'No AI summary attached yet.'}</div>
+                  <div class="chip-row compact">
+                    ${beliefTags.length ? beliefTags.map((tag) => `<span class="chip static">${tag}</span>`).join('') : '<span class="meta">No belief tags</span>'}
+                  </div>
                 </div>
                 <div class="inline-actions">
-                  <span class="badge ${priorityClass(event.importance)}">${titleCase(event.importance)}</span>
-                  <button class="button button-ghost small delete-event" data-id="${event.id}">Delete</button>
+                  <button class="button button-secondary small inbox-seen" data-id="${item.id}">Seen</button>
+                  <button class="button button-ghost small inbox-archive" data-id="${item.id}">Archive</button>
                 </div>
-              </div>
-              <div class="item-text"><strong>What happened:</strong> ${event.factualSummary || 'No event summary.'}</div>
-              <div class="detail-copy"><strong>Truth source:</strong> ${titleCase(event.sourceTier)} · ${event.sourceLabel || 'Unspecified'}</div>
-              <div class="detail-copy"><strong>Linked context:</strong> ${event.asset?.symbol || 'No asset'} · ${event.theme?.title || 'No theme'}</div>
-              <div class="detail-copy"><strong>AI layer:</strong> ${event.enrichment?.summary || 'No enrichment attached yet.'}</div>
-              <div class="inline-actions">
-                <button class="button button-secondary small create-reminder-from-event" data-id="${event.id}" data-title="${event.title}">Reminder</button>
-                <button class="button small launch-research" data-event-id="${event.id}">Research</button>
-              </div>
-              ${notesMarkup('event', event.id, 'Add a note about this event')}
-            </article>
-          `
-        )
-        .join('')
-    : `<div class="empty-state">No canonical events recorded yet.</div>`;
-
-  const remindersHtml = state.reminders.length
-    ? state.reminders
-        .map(
-          (reminder) => `
-            <article class="list-item">
-              <div class="list-row">
-                <div>
-                  <div class="list-title">${reminder.title}</div>
-                  <div class="meta">${titleCase(reminder.state)} · ${formatDate(reminder.dueAt)}</div>
-                </div>
-                <button class="button button-ghost small delete-reminder" data-id="${reminder.id}">Delete</button>
-              </div>
-              <div class="item-text">${reminder.note || 'No note attached.'}</div>
-            </article>
-          `
-        )
-        .join('')
-    : `<div class="empty-state">No reminders created yet.</div>`;
-
-  el('view-events').innerHTML = `
-    ${renderViewHeader('events')}
-    <div class="view-grid" data-source-screen="Advisor Follow-up Mobile">
-      <section class="panel span-7">
-        <div class="panel-header">
-          <div>
-            <div class="panel-label">Events</div>
-            <h2 class="panel-title">Canonical events</h2>
-          </div>
+              </article>
+            `;
+          }).join('') || '<div class="empty-state">No articles match this filter yet.</div>'}
         </div>
-        <div class="list">${eventsHtml}</div>
-      </section>
-
-      <section class="panel span-5">
-        <div class="panel-header">
-          <div>
-            <div class="panel-label">Reminders</div>
-            <h2 class="panel-title">Reminders</h2>
-          </div>
-        </div>
-        <div class="list">${remindersHtml}</div>
-      </section>
-
-      <section class="form-card span-6">
-        <div class="panel-header">
-          <div>
-            <div class="panel-label">Record event</div>
-            <h2 class="panel-title">New event</h2>
-          </div>
-        </div>
-        <form id="event-form" class="form-grid">
-          <input class="field" name="title" placeholder="Event title" required />
-          <select class="select" name="eventType">
-            <option value="earnings">earnings</option>
-            <option value="filing">filing</option>
-            <option value="news">news</option>
-            <option value="macro">macro</option>
-            <option value="theme_update">theme_update</option>
-            <option value="custom">custom</option>
-          </select>
-          <input class="field" name="symbol" placeholder="Linked symbol" />
-          <select class="select" name="themeId">
-            <option value="">No linked theme</option>
-            ${state.themes.map((theme) => `<option value="${theme.id}">${theme.title}</option>`).join('')}
-          </select>
-          <textarea class="textarea" name="factualSummary" placeholder="Deterministic fact only"></textarea>
-          <textarea class="textarea" name="reason" placeholder="Why it matters before AI enrichment"></textarea>
-          <input class="field" type="datetime-local" name="scheduledFor" required />
-          <input class="field" name="sourceLabel" placeholder="Source label" />
-          <select class="select" name="sourceTier">
-            <option value="tier_1">tier_1</option>
-            <option value="tier_2">tier_2</option>
-            <option value="tier_3">tier_3</option>
-          </select>
-          <select class="select" name="importance">
-            <option value="critical">critical</option>
-            <option value="high">high</option>
-            <option value="normal">normal</option>
-          </select>
-          <div class="form-actions">
-            <button class="button" type="submit">Record event</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="form-card span-6">
-        <div class="panel-header">
-          <div>
-            <div class="panel-label">Create reminder</div>
-            <h2 class="panel-title">New reminder</h2>
-          </div>
-        </div>
-        <form id="reminder-form" class="form-grid">
-          <input class="field" name="title" placeholder="Reminder title" required />
-          <select class="select" name="relatedId">
-            <option value="">No linked event</option>
-            ${state.calendar.map((event) => `<option value="${event.id}">${event.title}</option>`).join('')}
-          </select>
-          <input class="field" type="datetime-local" name="dueAt" required />
-          <textarea class="textarea" name="note" placeholder="What should be checked next"></textarea>
-          <div class="form-actions">
-            <button class="button" type="submit">Create reminder</button>
-          </div>
-        </form>
       </section>
     </div>
   `;
 }
 
 function renderResearch() {
-  const jobsHtml = state.researchWorkspace.length
-    ? state.researchWorkspace
-        .map((job) => {
-          const report = job.report;
-          return `
-            <article class="panel span-12">
-              <div class="panel-header">
-                <div>
-                  <div class="panel-label">${titleCase(job.triggerType)} research job</div>
-                  <h2 class="panel-title">${job.question}</h2>
-                  <p class="panel-copy">${report?.summary || 'No report attached yet.'}</p>
-                </div>
-                <div class="inline-actions">
-                  <span class="badge">${titleCase(job.status)}</span>
-                  <button class="button button-ghost small delete-research-job" data-id="${job.id}">Delete</button>
-                </div>
-              </div>
-              <div class="meta-grid">
-                <div class="meta-card">
-                  <div class="meta">Target</div>
-                  <div class="value">${titleCase(job.targetType)} · ${themeById(job.targetId)?.title || assetById(job.targetId)?.symbol || job.targetId || 'Custom'}</div>
-                </div>
-                <div class="meta-card">
-                  <div class="meta">Freshness</div>
-                  <div class="value">${report ? formatDate(report.freshnessAt) : 'Not available'}</div>
-                </div>
-                <div class="meta-card">
-                  <div class="meta">Confidence</div>
-                  <div class="value">${report ? `${Math.round(report.confidence * 100)}%` : 'Not available'}</div>
-                </div>
-                <div class="meta-card">
-                  <div class="meta">Next check</div>
-                  <div class="value">${report?.nextCheck || 'No next check recorded.'}</div>
-                </div>
-              </div>
-              ${
-                report
-                  ? `
-                    <div class="detail-block">
-                      <div class="panel-label">Citations</div>
-                      ${
-                        report.sources.length
-                          ? report.sources
-                              .map(
-                                (source) => `
-                                  <div class="source-row">
-                                    <div>
-                                      <strong>${source.title}</strong>
-                                      <div class="meta">${titleCase(source.tier)} · ${source.publisher || 'Unknown publisher'}</div>
-                                    </div>
-                                    <div class="meta">${formatDate(source.publishedAt)}</div>
-                                  </div>
-                                `
-                              )
-                              .join('')
-                          : '<div class="empty-state">No citations captured yet.</div>'
-                      }
-                    </div>
-                    <div class="detail-block">
-                      <div class="panel-label">Claims</div>
-                      ${
-                        report.claims.length
-                          ? report.claims
-                              .map(
-                                (claim) => `
-                                  <div class="source-row">
-                                    <div>
-                                      <strong>${claim.claim}</strong>
-                                      <div class="meta">Confidence ${Math.round(claim.confidence * 100)}%</div>
-                                    </div>
-                                  </div>
-                                `
-                              )
-                              .join('')
-                          : '<div class="empty-state">No claims captured yet.</div>'
-                      }
-                    </div>
-                  `
-                  : ''
-              }
-              ${report ? notesMarkup('research_report', report.id, 'Attach a review note to this report') : ''}
-            </article>
-          `;
-        })
-        .join('')
-    : `<div class="empty-state">No research jobs queued yet.</div>`;
+  const query = uiState.researchQuery || '';
+  const result = getResearchResults(query || (state.assets?.[0]?.symbol || ''));
 
   el('view-research').innerHTML = `
-    ${renderViewHeader('research')}
-    <div class="view-grid" data-source-screen="Research (Ethereal) - Enhanced Analysis">
-      <section class="span-7">
-        <div class="view-grid">${jobsHtml}</div>
-      </section>
-
-      <section class="form-card span-5">
+    ${renderViewHeader(
+      'Research',
+      'Search stocks, pull context, and inspect graphs',
+      'Research combines data, charts, and internet-style results in one place so users can go from a symbol to a quick read without leaving the app.',
+      [
+        ['Tracked names', state.portfolioSummary.trackedAssetsCount],
+        ['Saved reports', state.researchReports.length],
+        ['Latest query', query || 'Demo']
+      ]
+    )}
+    <div class="view-grid">
+      <section class="form-card">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Create research job</div>
-            <h2 class="panel-title">Create research job</h2>
+            <div class="panel-label">Search</div>
+            <h2 class="panel-title">Stock research</h2>
           </div>
         </div>
-        <form id="research-form" class="form-grid">
-          <select class="select" name="triggerType">
-            <option value="user_request">user_request</option>
-            <option value="digest">digest</option>
-            <option value="urgent_alert">urgent_alert</option>
-          </select>
-          <select class="select" name="targetType">
-            <option value="theme">theme</option>
-            <option value="asset">asset</option>
-            <option value="custom">custom</option>
-          </select>
-          <select class="select" name="targetId">
-            <option value="">No linked target</option>
-            ${state.themes.map((theme) => `<option value="${theme.id}">${theme.title}</option>`).join('')}
-            ${state.assets.map((asset) => `<option value="${asset.id}">${asset.symbol}</option>`).join('')}
-          </select>
-          <select class="select" name="relatedEventId">
-            <option value="">No linked event</option>
-            ${state.calendar.map((event) => `<option value="${event.id}">${event.title}</option>`).join('')}
-          </select>
-          <textarea class="textarea" name="question" placeholder="What should the research layer investigate?" required></textarea>
-          <textarea class="textarea" name="summary" placeholder="Optional placeholder summary"></textarea>
-          <textarea class="textarea" name="claim" placeholder="Optional core claim"></textarea>
+        <form id="research-search-form" class="form-grid">
+          <input class="field" name="query" value="${query}" placeholder="Search symbol, company, or belief" />
+          <div class="form-actions split-actions">
+            <button class="button" type="submit">Search</button>
+            <button id="queue-research-from-search" class="button button-ghost" type="button">Save as research run</button>
+          </div>
+        </form>
+      </section>
+
+      ${result ? `
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-label">Results</div>
+              <h2 class="panel-title">${result.asset.symbol || result.asset.name}</h2>
+            </div>
+            <span class="trend-pill ${result.performance.positive ? 'positive' : 'negative'}">${result.performance.positive ? '+' : ''}${result.performance.change}%</span>
+          </div>
+          <div class="meta-grid three-up">
+            ${result.results.map((entry) => `
+              <article class="meta-card research-result-card">
+                <div class="panel-label">${entry.type}</div>
+                <div class="value">${entry.title}</div>
+                <div class="detail-copy ${entry.rich ? 'rich-copy' : ''}">${entry.body}</div>
+              </article>
+            `).join('')}
+          </div>
+          <div class="detail-block">
+            <div class="panel-label">Key takeaways</div>
+            <div class="list compact-list">
+              ${result.bullets.map((bullet) => `<div class="bullet-row">• ${bullet}</div>`).join('')}
+            </div>
+          </div>
+        </section>
+      ` : '<div class="empty-state">No research results yet.</div>'}
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-label">Saved research</div>
+            <h2 class="panel-title">Recent runs</h2>
+          </div>
+        </div>
+        <div class="list">
+          ${(state.researchWorkspace || []).slice(0, 5).map((job) => `
+            <article class="list-item">
+              <div class="list-row">
+                <div>
+                  <div class="list-title">${job.question}</div>
+                  <div class="meta">${formatDate(job.createdAt)} · ${titleCase(job.status)}</div>
+                </div>
+                <button class="button button-ghost small delete-research-job" data-id="${job.id}">Delete</button>
+              </div>
+              <div class="item-text">${job.report?.summary || 'No report summary yet.'}</div>
+            </article>
+          `).join('') || '<div class="empty-state">No research runs saved yet.</div>'}
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderChat() {
+  const activeThread = getActiveThread();
+  const identityTags = getIdentityTags();
+
+  el('view-chat').innerHTML = `
+    ${renderViewHeader(
+      'Chat',
+      'Talk to the advisor AI',
+      'Multiple chat threads let users separate portfolio questions, thesis work, and event follow-ups. Identity context stays visible so the AI can stay aligned with the investor worldview.',
+      [
+        ['Chats', uiState.chat.threads.length],
+        ['Belief context', identityTags.length],
+        ['Status', uiState.chat.isTyping ? 'Typing' : 'Ready']
+      ]
+    )}
+    <div class="view-grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-label">Threads</div>
+            <h2 class="panel-title">Conversation list</h2>
+          </div>
+          <button id="new-chat" class="button small" type="button">New chat</button>
+        </div>
+        <div class="list compact-list">
+          ${uiState.chat.threads.map((thread) => `
+            <button class="thread-card ${thread.id === activeThread.id ? 'active' : ''}" data-thread-id="${thread.id}">
+              <span class="list-title">${thread.title}</span>
+              <span class="meta">${thread.messages.length} messages</span>
+            </button>
+          `).join('')}
+        </div>
+      </section>
+
+      <section class="panel chat-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-label">AI expert</div>
+            <h2 class="panel-title">${activeThread.title}</h2>
+          </div>
+        </div>
+        <div class="chat-identity-row">
+          ${identityTags.map((tag) => `<span class="chip static">${tag}</span>`).join('') || '<span class="meta">No belief context yet.</span>'}
+        </div>
+        <div class="particle-stage ${uiState.chat.isTyping ? 'typing' : ''}">
+          <div class="particle-core"></div>
+          <div class="orbit orbit-a"></div>
+          <div class="orbit orbit-b"></div>
+          <div class="orbit orbit-c"></div>
+        </div>
+        <div class="chat-log">
+          ${activeThread.messages.map((message) => `
+            <article class="chat-bubble ${message.role}">
+              <div class="meta">${message.role === 'assistant' ? 'Advisor AI' : 'You'}</div>
+              <div>${message.body}</div>
+            </article>
+          `).join('')}
+          ${uiState.chat.isTyping ? '<article class="chat-bubble assistant typing-bubble"><div class="meta">Advisor AI</div><div>Thinking through your portfolio and beliefs…</div></article>' : ''}
+        </div>
+        <form id="chat-form" class="form-grid">
+          <textarea class="textarea" name="message" placeholder="Ask about a holding, thesis, catalyst, or listing."></textarea>
           <div class="form-actions">
-            <button class="button" type="submit">Queue research</button>
+            <button class="button" type="submit">Send</button>
           </div>
         </form>
       </section>
@@ -1343,19 +991,19 @@ function renderResearch() {
 }
 
 function renderAll() {
-  el('workspace-title').textContent = 'Open Advisor';
+  el('workspace-title').textContent = uiState.settings.displayName || 'Open Advisor';
   el('status-label').textContent = isDemoMode ? 'Demo mode' : 'API connected';
+  el('status-meta').textContent = uiState.settings.notifications ? 'Live market copilot' : 'Notifications muted';
   el('metric-assets').textContent = state.portfolioSummary.trackedAssetsCount;
-  el('metric-reminders').textContent = state.portfolioSummary.openRemindersCount;
+  el('metric-positions').textContent = state.portfolioSummary.holdingsCount;
   el('metric-inbox').textContent = state.inbox.filter((item) => item.state !== 'archived').length;
-  el('metric-research').textContent = state.researchReports.length;
+  el('metric-beliefs').textContent = state.themes.length;
 
   renderNav();
-  renderOverview();
-  renderPortfolio();
-  renderThemes();
-  renderEvents();
+  renderDashboard();
+  renderInbox();
   renderResearch();
+  renderChat();
   bindActions();
   setView(currentView);
 }
@@ -1382,20 +1030,56 @@ async function refreshState() {
   renderAll();
 }
 
-function bindDelete(selector, pathBuilder) {
-  document.querySelectorAll(selector).forEach((button) => {
-    button.onclick = async () => {
-      await del(pathBuilder(button.dataset.id));
-      await refreshState();
-    };
-  });
+function ensurePrimaryWatchlist(rawState) {
+  rawState.watchlists = rawState.watchlists || [];
+  if (!rawState.watchlists.length) {
+    rawState.watchlists.push({ id: makeId('watchlist'), name: 'Main Watchlist', description: '', itemAssetIds: [] });
+  }
+  return rawState.watchlists[0];
+}
+
+async function mutateDemoState(mutator) {
+  const rawState = clone(loadStoredDemoState() || state);
+  mutator(rawState);
+  saveDemoState(rawState);
+  state = deriveClientState(rawState);
+  renderAll();
+}
+
+function simulateAdvisorReply(message) {
+  const activeThread = getActiveThread();
+  const beliefContext = getIdentityTags().slice(0, 3).join(', ') || 'your current beliefs';
+  const matchedAsset = (state.assets || []).find((asset) => [asset.symbol, asset.name].filter(Boolean).some((value) => message.toLowerCase().includes(value.toLowerCase())));
+  const opening = matchedAsset
+    ? `${matchedAsset.symbol || matchedAsset.name} is the clearest match in your workspace.`
+    : 'I would frame this through your tracked positions, watchlist, and catalysts first.';
+  const reply = `${opening} Based on ${beliefContext}, I’d watch price action, upcoming catalysts, and whether the latest articles confirm or challenge the thesis before you act. I can turn this into a reminder or research run next.`;
+
+  window.clearTimeout(chatTypingTimer);
+  uiState.chat.isTyping = true;
+  saveUiState();
+  renderAll();
+
+  chatTypingTimer = window.setTimeout(() => {
+    activeThread.messages.push({
+      id: makeId('msg'),
+      role: 'assistant',
+      body: reply,
+      createdAt: nowIso()
+    });
+    uiState.chat.isTyping = false;
+    saveUiState();
+    renderAll();
+  }, 1200);
 }
 
 function bindActions() {
-  el('reset-data').onclick = async () => {
-    await post('/v1/reset');
-    await refreshState();
-  };
+  document.querySelectorAll('.delete-holding').forEach((button) => {
+    button.onclick = async () => {
+      await del(`/v1/holdings/${button.dataset.id}`);
+      await refreshState();
+    };
+  });
 
   document.querySelectorAll('.inbox-seen').forEach((button) => {
     button.onclick = async () => {
@@ -1411,160 +1095,211 @@ function bindActions() {
     };
   });
 
-  document.querySelectorAll('.reminder-done').forEach((button) => {
+  document.querySelectorAll('[data-inbox-tag]').forEach((button) => {
+    button.onclick = () => {
+      uiState.inboxTag = button.dataset.inboxTag;
+      saveUiState();
+      renderAll();
+    };
+  });
+
+  document.querySelectorAll('.delete-research-job').forEach((button) => {
     button.onclick = async () => {
-      await post(`/v1/reminders/${button.dataset.id}/done`);
+      await del(`/v1/research-jobs/${button.dataset.id}`);
       await refreshState();
     };
   });
 
-  document.querySelectorAll('.reminder-snooze').forEach((button) => {
-    button.onclick = async () => {
-      await post(`/v1/reminders/${button.dataset.id}/snooze`, {});
-      await refreshState();
+  document.querySelectorAll('.thread-card').forEach((button) => {
+    button.onclick = () => {
+      uiState.chat.activeThreadId = button.dataset.threadId;
+      saveUiState();
+      renderAll();
     };
   });
 
-  document.querySelectorAll('.create-reminder-from-event').forEach((button) => {
+  document.querySelectorAll('.move-to-watchlist').forEach((button) => {
     button.onclick = async () => {
-      const event = eventById(button.dataset.id);
-      await post('/v1/reminders', {
-        title: `Review: ${button.dataset.title}`,
-        dueAt: event?.scheduledFor,
-        relatedType: 'event',
-        relatedId: event?.id,
-        note: event?.factualSummary
+      if (!isDemoMode) return;
+      await mutateDemoState((rawState) => {
+        const holding = rawState.holdings.find((entry) => entry.id === button.dataset.holdingId);
+        if (!holding) return;
+        const watchlist = ensurePrimaryWatchlist(rawState);
+        if (!watchlist.itemAssetIds.includes(holding.assetId)) watchlist.itemAssetIds.push(holding.assetId);
+        rawState.holdings = rawState.holdings.filter((entry) => entry.id !== holding.id);
       });
-      await refreshState();
     };
   });
 
-  document.querySelectorAll('.launch-research').forEach((button) => {
+  document.querySelectorAll('.move-to-portfolio').forEach((button) => {
     button.onclick = async () => {
-      const event = eventById(button.dataset.eventId);
-      await post('/v1/research-jobs', {
-        triggerType: 'user_request',
-        targetType: event?.themeId ? 'theme' : event?.assetId ? 'asset' : 'custom',
-        targetId: event?.themeId || event?.assetId || null,
-        relatedEventId: event?.id,
-        question: `Why does ${event?.title || 'this event'} matter?`
+      if (!isDemoMode) return;
+      await mutateDemoState((rawState) => {
+        const watchlist = ensurePrimaryWatchlist(rawState);
+        const assetId = button.dataset.assetId;
+        if (!rawState.holdings.some((entry) => entry.assetId === assetId)) {
+          rawState.holdings.push({
+            id: makeId('holding'),
+            assetId,
+            quantity: 1,
+            costBasis: null,
+            sourceType: 'watchlist_promoted'
+          });
+        }
+        watchlist.itemAssetIds = watchlist.itemAssetIds.filter((id) => id !== assetId);
       });
-      currentView = 'research';
-      await refreshState();
     };
   });
 
-  document.querySelectorAll('.theme-research').forEach((button) => {
+  document.querySelectorAll('.remove-from-watchlist').forEach((button) => {
     button.onclick = async () => {
-      await post('/v1/research-jobs', {
-        triggerType: 'user_request',
-        targetType: 'theme',
-        targetId: button.dataset.id,
-        question: `Research ${button.dataset.title} for confirming and disconfirming signals.`
+      if (!isDemoMode) return;
+      await mutateDemoState((rawState) => {
+        rawState.watchlists = (rawState.watchlists || []).map((watchlist) => ({
+          ...watchlist,
+          itemAssetIds: (watchlist.itemAssetIds || []).filter((id) => id !== button.dataset.assetId)
+        }));
       });
-      currentView = 'research';
-      await refreshState();
     };
   });
 
-  document.querySelectorAll('.note-form').forEach((form) => {
-    form.onsubmit = async (event) => {
+  const quickAddForm = el('quick-add-form');
+  if (quickAddForm) {
+    quickAddForm.onsubmit = async (event) => {
       event.preventDefault();
-      const formData = new FormData(form);
-      await post('/v1/notes', {
-        targetType: form.dataset.targetType,
-        targetId: form.dataset.targetId,
-        body: formData.get('body')
-      });
-      await refreshState();
-    };
-  });
-
-  const holdingForm = el('holding-form');
-  if (holdingForm) {
-    holdingForm.onsubmit = async (event) => {
-      event.preventDefault();
-      const form = new FormData(holdingForm);
-      await post('/v1/holdings', Object.fromEntries(form.entries()));
-      holdingForm.reset();
-      await refreshState();
-    };
-  }
-
-  const watchlistForm = el('watchlist-form');
-  if (watchlistForm) {
-    watchlistForm.onsubmit = async (event) => {
-      event.preventDefault();
-      const form = new FormData(watchlistForm);
+      const form = new FormData(quickAddForm);
       const body = Object.fromEntries(form.entries());
-      body.items = parseSymbols(body.symbols);
-      await post('/v1/watchlists', body);
-      watchlistForm.reset();
+      if (body.destination === 'portfolio') {
+        await post('/v1/holdings', body);
+      } else if (isDemoMode) {
+        await mutateDemoState((rawState) => {
+          const asset = ensureDemoAsset(rawState, body);
+          const watchlist = ensurePrimaryWatchlist(rawState);
+          if (!watchlist.itemAssetIds.includes(asset.id)) watchlist.itemAssetIds.push(asset.id);
+        });
+        quickAddForm.reset();
+        return;
+      }
+      quickAddForm.reset();
       await refreshState();
     };
   }
 
-  const themeForm = el('theme-form');
-  if (themeForm) {
-    themeForm.onsubmit = async (event) => {
+  const beliefForm = el('belief-form');
+  if (beliefForm) {
+    beliefForm.onsubmit = async (event) => {
       event.preventDefault();
-      const form = new FormData(themeForm);
+      const form = new FormData(beliefForm);
       const body = Object.fromEntries(form.entries());
       body.assets = parseSymbols(body.symbols);
       await post('/v1/themes', body);
-      themeForm.reset();
+      beliefForm.reset();
       await refreshState();
     };
   }
 
-  const eventForm = el('event-form');
-  if (eventForm) {
-    eventForm.onsubmit = async (event) => {
+  const researchSearchForm = el('research-search-form');
+  if (researchSearchForm) {
+    researchSearchForm.onsubmit = (event) => {
       event.preventDefault();
-      const form = new FormData(eventForm);
-      const body = Object.fromEntries(form.entries());
-      body.scheduledFor = new Date(body.scheduledFor).toISOString();
-      await post('/v1/events', body);
-      eventForm.reset();
+      const form = new FormData(researchSearchForm);
+      uiState.researchQuery = String(form.get('query') || '');
+      saveUiState();
+      renderAll();
+    };
+  }
+
+  const queueResearchButton = el('queue-research-from-search');
+  if (queueResearchButton) {
+    queueResearchButton.onclick = async () => {
+      const query = uiState.researchQuery || state.assets?.[0]?.symbol || 'Market research';
+      await post('/v1/research-jobs', {
+        triggerType: 'user_request',
+        targetType: 'custom',
+        question: `Research ${query}`,
+        summary: `Saved from the research surface for ${query}.`
+      });
       await refreshState();
     };
   }
 
-  const reminderForm = el('reminder-form');
-  if (reminderForm) {
-    reminderForm.onsubmit = async (event) => {
+  const chatForm = el('chat-form');
+  if (chatForm) {
+    chatForm.onsubmit = (event) => {
       event.preventDefault();
-      const form = new FormData(reminderForm);
-      const body = Object.fromEntries(form.entries());
-      body.relatedType = 'event';
-      body.dueAt = new Date(body.dueAt).toISOString();
-      await post('/v1/reminders', body);
-      reminderForm.reset();
-      await refreshState();
+      const form = new FormData(chatForm);
+      const body = String(form.get('message') || '').trim();
+      if (!body) return;
+      const activeThread = getActiveThread();
+      activeThread.messages.push({ id: makeId('msg'), role: 'user', body, createdAt: nowIso() });
+      activeThread.title = activeThread.messages.length <= 2 ? body.slice(0, 28) : activeThread.title;
+      saveUiState();
+      chatForm.reset();
+      renderAll();
+      simulateAdvisorReply(body);
     };
   }
 
-  const researchForm = el('research-form');
-  if (researchForm) {
-    researchForm.onsubmit = async (event) => {
+  const newChatButton = el('new-chat');
+  if (newChatButton) {
+    newChatButton.onclick = () => {
+      const thread = {
+        id: makeId('thread'),
+        title: 'New chat',
+        messages: [{ id: makeId('msg'), role: 'assistant', body: 'New conversation ready. Ask about a holding, belief, or catalyst.', createdAt: nowIso() }]
+      };
+      uiState.chat.threads.unshift(thread);
+      uiState.chat.activeThreadId = thread.id;
+      saveUiState();
+      renderAll();
+    };
+  }
+
+  el('open-settings').onclick = () => openSettings(true);
+  el('close-settings').onclick = () => openSettings(false);
+  el('settings-modal').querySelectorAll('[data-close-settings]').forEach((node) => {
+    node.onclick = () => openSettings(false);
+  });
+
+  const settingsForm = el('settings-form');
+  if (settingsForm) {
+    settingsForm.displayName.value = uiState.settings.displayName;
+    settingsForm.notifications.checked = uiState.settings.notifications;
+    settingsForm.priceAlerts.checked = uiState.settings.priceAlerts;
+    settingsForm.ipoAlerts.checked = uiState.settings.ipoAlerts;
+    settingsForm.compactMode.checked = uiState.settings.compactMode;
+    settingsForm.onsubmit = (event) => {
       event.preventDefault();
-      const form = new FormData(researchForm);
-      await post('/v1/research-jobs', Object.fromEntries(form.entries()));
-      researchForm.reset();
-      await refreshState();
+      const form = new FormData(settingsForm);
+      uiState.settings = {
+        displayName: String(form.get('displayName') || 'Open Advisor'),
+        notifications: form.get('notifications') === 'on',
+        priceAlerts: form.get('priceAlerts') === 'on',
+        ipoAlerts: form.get('ipoAlerts') === 'on',
+        compactMode: form.get('compactMode') === 'on'
+      };
+      saveUiState();
+      openSettings(false);
+      renderAll();
     };
   }
 
-  bindDelete('.delete-holding', (id) => `/v1/holdings/${id}`);
-  bindDelete('.delete-watchlist', (id) => `/v1/watchlists/${id}`);
-  bindDelete('.delete-theme', (id) => `/v1/themes/${id}`);
-  bindDelete('.delete-event', (id) => `/v1/events/${id}`);
-  bindDelete('.delete-reminder', (id) => `/v1/reminders/${id}`);
-  bindDelete('.delete-research-job', (id) => `/v1/research-jobs/${id}`);
-  bindDelete('.delete-note', (id) => `/v1/notes/${id}`);
+  el('reset-data').onclick = async () => {
+    uiState = loadUiState();
+    await post('/v1/reset');
+    await refreshState();
+    openSettings(false);
+  };
 }
 
+function openSettings(open) {
+  const modal = el('settings-modal');
+  modal.classList.toggle('hidden', !open);
+  modal.setAttribute('aria-hidden', open ? 'false' : 'true');
+}
+
+uiState = loadUiState();
 refreshState().catch((error) => {
   el('status-label').textContent = 'API unavailable';
-  el('view-overview').innerHTML = `<section class="view-header"><div><span class="eyebrow">Load failure</span><h2 class="view-title">Open Advisor could not initialize.</h2><p class="hero-summary">${error.message}</p></div></section>`;
+  el('view-dashboard').innerHTML = `<section class="view-header"><div><span class="eyebrow">Load failure</span><h2 class="view-title">Open Advisor could not initialize.</h2><p class="hero-summary">${error.message}</p></div></section>`;
 });
