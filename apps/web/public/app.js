@@ -18,7 +18,6 @@ const demoStorageKey = 'openAdvisorPagesState';
 const uiStorageKey = 'openAdvisorUiState';
 let uiState = null;
 let chatTypingTimer = null;
-let revealObserver = null;
 
 function demoBootstrapUrl() {
   const buildVersion = window.OPEN_ADVISOR_BUILD;
@@ -679,7 +678,6 @@ function setView(view) {
     document.querySelectorAll('.view').forEach((section) => section.classList.remove('active-view'));
     el(`view-${view}`).classList.add('active-view');
     renderNav();
-    armRevealAnimations();
   };
 
   if (document.startViewTransition) {
@@ -960,7 +958,15 @@ function renderChat() {
       'Chat',
       'Separate portfolio questions, thesis work, and follow-ups into focused conversations with the advisor.'
     )}
-    <div class="view-grid">
+    <div class="chat-scene ${uiState.chat.isTyping ? 'typing' : ''}">
+      <div class="chat-atmosphere" aria-hidden="true">
+        <div class="particle-core"></div>
+        <div class="orbit orbit-a"></div>
+        <div class="orbit orbit-b"></div>
+        <div class="orbit orbit-c"></div>
+        <div class="particle-dust">${createParticles(28)}</div>
+      </div>
+      <div class="view-grid chat-scene__content">
       <section class="panel">
         <div class="panel-header">
           <div>
@@ -989,13 +995,6 @@ function renderChat() {
         <div class="chat-identity-row">
           ${identityTags.map((tag) => `<span class="chip static">${tag}</span>`).join('') || '<span class="meta">No belief context yet.</span>'}
         </div>
-        <div class="particle-stage ${uiState.chat.isTyping ? 'typing' : ''}">
-          <div class="particle-core"></div>
-          <div class="orbit orbit-a"></div>
-          <div class="orbit orbit-b"></div>
-          <div class="orbit orbit-c"></div>
-          <div class="particle-dust">${createParticles(12)}</div>
-        </div>
         <div class="chat-log">
           ${activeThread.messages.map((message) => `
             <article class="chat-bubble ${message.role}">
@@ -1012,6 +1011,7 @@ function renderChat() {
           </div>
         </form>
       </section>
+      </div>
     </div>
   `;
 }
@@ -1029,35 +1029,6 @@ function renderAll() {
   renderChat();
   bindActions();
   setView(currentView);
-  if (!document.querySelector('.reveal-item')) armRevealAnimations();
-}
-
-function armRevealAnimations() {
-  if (revealObserver) revealObserver.disconnect();
-  document.documentElement.classList.add('reveal-enabled');
-
-  const items = Array.from(document.querySelectorAll('.active-view .panel, .active-view .form-card, .active-view .detail-block, .active-view .list-item, .active-view .empty-state, .active-view .meta-card, .active-view .belief-card, .active-view .stock-card, .active-view .thread-card, .active-view .chat-bubble, .active-view .particle-stage, .active-view .stitch-page-title'));
-
-  items.forEach((node, index) => {
-    node.classList.add('reveal-item');
-    node.style.setProperty('--reveal-delay', `${Math.min(index * 20, 120)}ms`);
-  });
-
-  if (!('IntersectionObserver' in window)) {
-    items.forEach((node) => node.classList.add('is-visible'));
-    return;
-  }
-
-  revealObserver = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('is-visible');
-        revealObserver.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
-
-  items.forEach((node) => revealObserver.observe(node));
 }
 
 function syncScrollMotion() {

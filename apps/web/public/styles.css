@@ -609,6 +609,27 @@ textarea { min-height: 108px; resize: vertical; }
 .thread-card.active { border-color: rgba(96, 91, 119, 0.35); box-shadow: inset 0 0 0 1px rgba(96, 91, 119, 0.12); }
 
 .chat-panel { overflow: visible; }
+.chat-scene {
+  position: relative;
+  isolation: isolate;
+}
+.chat-scene__content {
+  position: relative;
+  z-index: 1;
+}
+.chat-atmosphere {
+  position: absolute;
+  inset: 8px 0 0;
+  min-height: calc(100% - 8px);
+  border-radius: 34px;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(216, 209, 242, 0.28), rgba(255,255,255,0.12) 38%, rgba(193,232,250,0.14) 64%, transparent 100%),
+    linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+  opacity: 0.95;
+  z-index: 0;
+}
 .chat-identity-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .chat-log { display: grid; gap: 10px; max-height: 420px; overflow: auto; padding-right: 2px; }
 .chat-bubble.user {
@@ -622,17 +643,20 @@ textarea { min-height: 108px; resize: vertical; }
 }
 .typing-bubble { opacity: 0.86; }
 
-.particle-stage {
+.particle-stage,
+.chat-atmosphere {
   position: relative;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(216, 209, 242, 0.35), rgba(255,255,255,0.4) 45%, rgba(193,232,250,0.2) 70%, transparent 100%),
+    linear-gradient(135deg, rgba(255,255,255,0.32), rgba(255,255,255,0.08));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.particle-stage {
   height: 150px;
   margin: 6px 0 18px;
   border-radius: 24px;
   border: 1px solid var(--line);
-  background:
-    radial-gradient(circle at 50% 50%, rgba(216, 209, 242, 0.35), rgba(255,255,255,0.4) 45%, rgba(193,232,250,0.2) 70%, transparent 100%),
-    linear-gradient(135deg, rgba(255,255,255,0.32), rgba(255,255,255,0.08));
   overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
 }
 .particle-core {
   position: absolute;
@@ -666,28 +690,16 @@ textarea { min-height: 108px; resize: vertical; }
 .orbit-a { width: 120px; height: 120px; margin: -60px 0 0 -60px; animation: orbitSpin 10s linear infinite; }
 .orbit-b { width: 88px; height: 88px; margin: -44px 0 0 -44px; animation: orbitSpinReverse 7s linear infinite; }
 .orbit-c { width: 148px; height: 76px; margin: -38px 0 0 -74px; animation: orbitTilt 8s ease-in-out infinite; }
-.particle-stage.typing .particle-core { animation: pulseCore 1s ease-in-out infinite; }
-.particle-stage.typing .orbit-a { animation-duration: 3.2s; }
-.particle-stage.typing .orbit-b { animation-duration: 2.4s; }
-.particle-stage.typing .orbit-c { animation-duration: 2.8s; }
-.particle-stage.typing .particle { animation-duration: 3.2s; }
-
-.reveal-enabled .reveal-item {
-  opacity: 0;
-  transform: translateY(12px) scale(0.992);
-  filter: blur(6px);
-  transition:
-    opacity 0.28s ease,
-    transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
-    filter 0.28s ease;
-  transition-delay: var(--reveal-delay, 0ms);
-}
-
-.reveal-enabled .reveal-item.is-visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  filter: blur(0);
-}
+.particle-stage.typing .particle-core,
+.chat-scene.typing .particle-core { animation: pulseCore 1s ease-in-out infinite; }
+.particle-stage.typing .orbit-a,
+.chat-scene.typing .orbit-a { animation-duration: 3.2s; }
+.particle-stage.typing .orbit-b,
+.chat-scene.typing .orbit-b { animation-duration: 2.4s; }
+.particle-stage.typing .orbit-c,
+.chat-scene.typing .orbit-c { animation-duration: 2.8s; }
+.particle-stage.typing .particle,
+.chat-scene.typing .particle { animation-duration: 3.2s; }
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -796,10 +808,4 @@ textarea { min-height: 108px; resize: vertical; }
     scroll-behavior: auto !important;
   }
 
-  .reveal-enabled .reveal-item,
-  .reveal-enabled .reveal-item.is-visible {
-    opacity: 1;
-    transform: none;
-    filter: none;
-  }
 }
