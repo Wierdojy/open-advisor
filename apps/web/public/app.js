@@ -628,22 +628,25 @@ function getActiveThread() {
   return uiState.chat.threads.find((thread) => thread.id === uiState.chat.activeThreadId) || uiState.chat.threads[0];
 }
 
-function renderHeroArt(view) {
+function renderViewAtmosphere(view, particleCount = 28) {
   const meta = viewMeta[view] || viewMeta.dashboard;
   return `
-    <div class="hero-art hero-art--${meta.accent}" aria-hidden="true">
+    <div class="view-atmosphere view-atmosphere--${meta.accent}" aria-hidden="true">
+      <div class="particle-core particle-core--a"></div>
+      <div class="particle-core particle-core--b"></div>
+      <div class="particle-core particle-core--c"></div>
+      <div class="orbit orbit-a"></div>
+      <div class="orbit orbit-b"></div>
+      <div class="orbit orbit-c"></div>
+      <div class="orbit orbit-d"></div>
       <div class="hero-art__halo hero-art__halo--one"></div>
       <div class="hero-art__halo hero-art__halo--two"></div>
       <div class="hero-art__grid"></div>
-      <div class="hero-art__orb hero-art__orb--main"></div>
-      <div class="hero-art__orb hero-art__orb--small"></div>
       <svg class="hero-art__lines" viewBox="0 0 240 180" fill="none" preserveAspectRatio="none">
         <path d="M8 132C44 150 83 84 122 92C157 99 168 136 205 136C217 136 227 133 232 128" />
         <path d="M20 44C52 31 78 61 111 61C151 61 170 24 213 28" />
       </svg>
-      <div class="hero-art__ring hero-art__ring--one"></div>
-      <div class="hero-art__ring hero-art__ring--two"></div>
-      <div class="hero-art__particles">${createParticles(10, 'hero-particle')}</div>
+      <div class="particle-dust">${createParticles(particleCount)}</div>
     </div>
   `;
 }
@@ -695,13 +698,12 @@ function setView(view) {
 function renderViewHeader(view, title, copy) {
   const meta = viewMeta[view] || viewMeta.dashboard;
   return `
-    <section class="stitch-page-title stitch-page-title--${meta.accent} ${view === 'chat' ? 'stitch-page-title--minimal' : ''}">
+    <section class="stitch-page-title stitch-page-title--${meta.accent} stitch-page-title--minimal">
       <div class="stitch-page-title__copy-block">
         <div class="eyebrow">${meta.kicker}</div>
         <h2 class="stitch-page-title__heading">${title}</h2>
         <p class="stitch-page-title__copy">${copy}</p>
       </div>
-      ${view === 'chat' ? '' : renderHeroArt(view)}
     </section>
   `;
 }
@@ -729,12 +731,14 @@ function renderDashboard() {
     : '<div class="empty-state">No watchlist names yet.</div>';
 
   el('view-dashboard').innerHTML = `
+    <div class="tab-scene tab-scene--dashboard">
+    ${renderViewAtmosphere('dashboard', 32)}
     ${renderViewHeader(
       'dashboard',
       'Dashboard',
       'Portfolio first, watchlist right below it. Keep owned names, future entries, and quick capture in one calm workspace.'
     )}
-    <div class="view-grid">
+    <div class="view-grid tab-scene__content">
       <section class="panel">
         <div class="panel-header">
           <div>
@@ -777,6 +781,7 @@ function renderDashboard() {
         </form>
       </section>
     </div>
+    </div>
   `;
 }
 
@@ -786,12 +791,14 @@ function renderInbox() {
   const items = state.inbox.filter((item) => item.state !== 'archived').filter((item) => filterTag === 'all' || tagsForInboxItem(item).includes(filterTag));
 
   el('view-inbox').innerHTML = `
+    <div class="tab-scene tab-scene--inbox">
+    ${renderViewAtmosphere('inbox', 34)}
     ${renderViewHeader(
       'inbox',
       'Inbox',
       'Identity-linked market coverage, organized around what you already own, track, and believe.'
     )}
-    <div class="view-grid">
+    <div class="view-grid tab-scene__content">
       <section class="panel">
         <div class="panel-header">
           <div>
@@ -865,6 +872,7 @@ function renderInbox() {
         </div>
       </section>
     </div>
+    </div>
   `;
 }
 
@@ -873,12 +881,14 @@ function renderResearch() {
   const result = getResearchResults(query || (state.assets?.[0]?.symbol || ''));
 
   el('view-research').innerHTML = `
+    <div class="tab-scene tab-scene--research">
+    ${renderViewAtmosphere('research', 36)}
     ${renderViewHeader(
       'research',
       'Research',
       'Search stocks, pull context, and inspect graphs without losing the thread of your portfolio or thesis work.'
     )}
-    <div class="view-grid">
+    <div class="view-grid tab-scene__content">
       <section class="form-card">
         <div class="panel-header">
           <div>
@@ -945,6 +955,7 @@ function renderResearch() {
         </div>
       </section>
     </div>
+    </div>
   `;
 }
 
@@ -953,17 +964,8 @@ function renderChat() {
   const identityTags = getIdentityTags();
 
   el('view-chat').innerHTML = `
-    <div class="chat-view ${uiState.chat.isTyping ? 'typing' : ''}">
-      <div class="chat-atmosphere" aria-hidden="true">
-        <div class="particle-core particle-core--a"></div>
-        <div class="particle-core particle-core--b"></div>
-        <div class="particle-core particle-core--c"></div>
-        <div class="orbit orbit-a"></div>
-        <div class="orbit orbit-b"></div>
-        <div class="orbit orbit-c"></div>
-        <div class="orbit orbit-d"></div>
-        <div class="particle-dust">${createParticles(72)}</div>
-      </div>
+    <div class="chat-view tab-scene tab-scene--chat ${uiState.chat.isTyping ? 'typing' : ''}">
+      ${renderViewAtmosphere('chat', 72)}
       ${renderViewHeader(
         'chat',
         'Chat',
