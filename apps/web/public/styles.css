@@ -308,7 +308,7 @@ textarea { min-height: 108px; resize: vertical; }
 }
 
 .view-atmosphere {
-  inset: 0 0 -40px;
+  inset: -24px 0 -48px;
   overflow: hidden;
   pointer-events: none;
   opacity: 1;
@@ -331,6 +331,7 @@ textarea { min-height: 108px; resize: vertical; }
 }
 
 .particle-dust {
+  position: absolute;
   inset: 0;
 }
 
@@ -382,10 +383,11 @@ textarea { min-height: 108px; resize: vertical; }
 }
 .view-atmosphere--rose {
   background:
-    radial-gradient(circle at 50% 18%, rgba(251, 218, 235, 0.34), rgba(255,255,255,0.05) 24%, rgba(219,206,242,0.18) 48%, transparent 80%),
-    radial-gradient(circle at 8% 14%, rgba(251, 218, 235, 0.22), transparent 22%),
-    radial-gradient(circle at 92% 22%, rgba(193, 232, 250, 0.16), transparent 24%),
-    radial-gradient(circle at 26% 82%, rgba(216, 209, 242, 0.16), transparent 18%),
+    radial-gradient(circle at 50% 14%, rgba(251, 218, 235, 0.44), rgba(255,255,255,0.05) 22%, rgba(219,206,242,0.22) 46%, transparent 82%),
+    radial-gradient(circle at 8% 14%, rgba(251, 218, 235, 0.28), transparent 24%),
+    radial-gradient(circle at 92% 22%, rgba(193, 232, 250, 0.22), transparent 26%),
+    radial-gradient(circle at 26% 82%, rgba(216, 209, 242, 0.22), transparent 20%),
+    radial-gradient(circle at 72% 72%, rgba(251, 218, 235, 0.18), transparent 22%),
     linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
 }
 .meta-grid {
@@ -614,6 +616,24 @@ textarea { min-height: 108px; resize: vertical; }
   pointer-events: none;
   z-index: 0;
 }
+
+.tab-scene--chat {
+  min-height: calc(100vh - 148px);
+}
+
+.tab-scene--chat .view-atmosphere {
+  inset: -36px 0 -60px;
+  opacity: 1;
+}
+
+.tab-scene--chat .view-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255,255,255,0.18), transparent 18%),
+    radial-gradient(circle at 50% 38%, rgba(216, 209, 242, 0.22), transparent 34%);
+}
 .chat-scene__content {
   position: relative;
   z-index: 1;
@@ -626,6 +646,11 @@ textarea { min-height: 108px; resize: vertical; }
 .tab-scene .chat-bubble {
   background: rgba(255,255,255,0.42);
   backdrop-filter: blur(18px) saturate(1.06);
+}
+.tab-scene--chat .panel,
+.tab-scene--chat .thread-card,
+.tab-scene--chat .chat-bubble {
+  background: rgba(255,255,255,0.34);
 }
 .tab-scene .panel {
   border-color: rgba(121, 118, 125, 0.1);
@@ -684,6 +709,20 @@ textarea { min-height: 108px; resize: vertical; }
   height: 18px;
   margin: -9px 0 0 -9px;
   opacity: 0.52;
+}
+
+.tab-scene--chat .particle-core--a {
+  top: 26%;
+}
+
+.tab-scene--chat .particle-core--b {
+  left: 14%;
+  top: 64%;
+}
+
+.tab-scene--chat .particle-core--c {
+  left: 86%;
+  top: 62%;
 }
 .orbit {
   position: absolute;
