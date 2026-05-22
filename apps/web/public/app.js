@@ -4,10 +4,10 @@ const apiBase = localApiHosts.has(window.location.hostname)
   : null;
 
 const viewMeta = {
-  dashboard: { code: '01', label: 'Dashboard', icon: 'dashboard' },
-  inbox: { code: '02', label: 'Inbox', icon: 'inbox' },
-  research: { code: '03', label: 'Research', icon: 'query_stats' },
-  chat: { code: '04', label: 'Chat', icon: 'forum' }
+  dashboard: { label: 'Dashboard', icon: 'dashboard', accent: 'violet', kicker: 'Portfolio atelier' },
+  inbox: { label: 'Inbox', icon: 'inbox', accent: 'cyan', kicker: 'Signal curation' },
+  research: { label: 'Research', icon: 'query_stats', accent: 'amber', kicker: 'Context and discovery' },
+  chat: { label: 'Chat', icon: 'forum', accent: 'rose', kicker: 'Advisor dialogue' }
 };
 const views = Object.keys(viewMeta);
 
@@ -18,6 +18,7 @@ const demoStorageKey = 'openAdvisorPagesState';
 const uiStorageKey = 'openAdvisorUiState';
 let uiState = null;
 let chatTypingTimer = null;
+let revealObserver = null;
 
 function demoBootstrapUrl() {
   const buildVersion = window.OPEN_ADVISOR_BUILD;
@@ -75,6 +76,16 @@ function sortByDateDesc(items, key) {
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function createParticles(count, prefix = 'particle') {
+  return Array.from({ length: count }, (_, index) => {
+    const x = ((index * 17) % 100) + 2;
+    const y = ((index * 23) % 100) + 4;
+    const delay = (index * 0.6).toFixed(2);
+    const duration = (7 + (index % 5) * 1.4).toFixed(2);
+    return `<span class="${prefix}" style="--x:${x}%;--y:${y}%;--delay:${delay}s;--duration:${duration}s"></span>`;
+  }).join('');
 }
 
 function getMap(items) {
@@ -618,6 +629,26 @@ function getActiveThread() {
   return uiState.chat.threads.find((thread) => thread.id === uiState.chat.activeThreadId) || uiState.chat.threads[0];
 }
 
+function renderHeroArt(view) {
+  const meta = viewMeta[view] || viewMeta.dashboard;
+  return `
+    <div class="hero-art hero-art--${meta.accent}" aria-hidden="true">
+      <div class="hero-art__halo hero-art__halo--one"></div>
+      <div class="hero-art__halo hero-art__halo--two"></div>
+      <div class="hero-art__grid"></div>
+      <div class="hero-art__orb hero-art__orb--main"></div>
+      <div class="hero-art__orb hero-art__orb--small"></div>
+      <svg class="hero-art__lines" viewBox="0 0 240 180" fill="none" preserveAspectRatio="none">
+        <path d="M8 132C44 150 83 84 122 92C157 99 168 136 205 136C217 136 227 133 232 128" />
+        <path d="M20 44C52 31 78 61 111 61C151 61 170 24 213 28" />
+      </svg>
+      <div class="hero-art__ring hero-art__ring--one"></div>
+      <div class="hero-art__ring hero-art__ring--two"></div>
+      <div class="hero-art__particles">${createParticles(10, 'hero-particle')}</div>
+    </div>
+  `;
+}
+
 function renderNav() {
   el('nav').innerHTML = views
     .map((view) => {
@@ -637,18 +668,32 @@ function renderNav() {
 }
 
 function setView(view) {
-  currentView = view;
-  document.querySelectorAll('.view').forEach((section) => section.classList.remove('active-view'));
-  el(`view-${view}`).classList.add('active-view');
-  renderNav();
+  const applyView = () => {
+    currentView = view;
+    document.body.dataset.view = view;
+    document.querySelectorAll('.view').forEach((section) => section.classList.remove('active-view'));
+    el(`view-${view}`).classList.add('active-view');
+    renderNav();
+    armRevealAnimations();
+  };
+
+  if (document.startViewTransition) {
+    document.startViewTransition(applyView);
+  } else {
+    applyView();
+  }
 }
 
-function renderViewHeader(title, copy) {
+function renderViewHeader(view, title, copy) {
+  const meta = viewMeta[view] || viewMeta.dashboard;
   return `
-    <section class="stitch-page-title">
-      <div class="eyebrow">Open Advisor</div>
-      <h2 class="stitch-page-title__heading">${title}</h2>
-      <p class="stitch-page-title__copy">${copy}</p>
+    <section class="stitch-page-title stitch-page-title--${meta.accent}">
+      <div class="stitch-page-title__copy-block">
+        <div class="eyebrow">${meta.kicker}</div>
+        <h2 class="stitch-page-title__heading">${title}</h2>
+        <p class="stitch-page-title__copy">${copy}</p>
+      </div>
+      ${renderHeroArt(view)}
     </section>
   `;
 }
@@ -677,6 +722,7 @@ function renderDashboard() {
 
   el('view-dashboard').innerHTML = `
     ${renderViewHeader(
+      'dashboard',
       'Dashboard',
       'Portfolio first, watchlist right below it. Keep owned names, future entries, and quick capture in one calm workspace.'
     )}
@@ -733,6 +779,7 @@ function renderInbox() {
 
   el('view-inbox').innerHTML = `
     ${renderViewHeader(
+      'inbox',
       'Inbox',
       'Identity-linked market coverage, organized around what you already own, track, and believe.'
     )}
@@ -819,6 +866,7 @@ function renderResearch() {
 
   el('view-research').innerHTML = `
     ${renderViewHeader(
+      'research',
       'Research',
       'Search stocks, pull context, and inspect graphs without losing the thread of your portfolio or thesis work.'
     )}
@@ -898,6 +946,7 @@ function renderChat() {
 
   el('view-chat').innerHTML = `
     ${renderViewHeader(
+      'chat',
       'Chat',
       'Separate portfolio questions, thesis work, and follow-ups into focused conversations with the advisor.'
     )}
@@ -935,6 +984,7 @@ function renderChat() {
           <div class="orbit orbit-a"></div>
           <div class="orbit orbit-b"></div>
           <div class="orbit orbit-c"></div>
+          <div class="particle-dust">${createParticles(12)}</div>
         </div>
         <div class="chat-log">
           ${activeThread.messages.map((message) => `
@@ -960,6 +1010,7 @@ function renderAll() {
   el('workspace-title').textContent = uiState.settings.displayName || 'Open Advisor';
   el('status-label').textContent = isDemoMode ? 'Demo mode' : 'API connected';
   el('status-meta').textContent = uiState.settings.notifications ? 'Live market copilot' : 'Notifications muted';
+  document.body.dataset.view = currentView;
 
   renderNav();
   renderDashboard();
@@ -969,6 +1020,41 @@ function renderAll() {
   bindActions();
   setView(currentView);
 }
+
+function armRevealAnimations() {
+  if (revealObserver) revealObserver.disconnect();
+  document.documentElement.classList.add('reveal-enabled');
+
+  const items = Array.from(document.querySelectorAll('.active-view .panel, .active-view .form-card, .active-view .detail-block, .active-view .list-item, .active-view .empty-state, .active-view .meta-card, .active-view .belief-card, .active-view .stock-card, .active-view .thread-card, .active-view .chat-bubble, .active-view .particle-stage, .active-view .stitch-page-title'));
+
+  items.forEach((node, index) => {
+    node.classList.add('reveal-item');
+    node.style.setProperty('--reveal-delay', `${Math.min(index * 45, 240)}ms`);
+  });
+
+  if (!('IntersectionObserver' in window)) {
+    items.forEach((node) => node.classList.add('is-visible'));
+    return;
+  }
+
+  revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+
+  items.forEach((node) => revealObserver.observe(node));
+}
+
+function syncScrollMotion() {
+  document.documentElement.style.setProperty('--scroll-y', `${window.scrollY || 0}`);
+}
+
+window.addEventListener('scroll', syncScrollMotion, { passive: true });
+syncScrollMotion();
 
 async function refreshState() {
   try {
