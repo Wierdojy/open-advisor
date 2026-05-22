@@ -964,7 +964,7 @@ function renderChat() {
         <div class="orbit orbit-a"></div>
         <div class="orbit orbit-b"></div>
         <div class="orbit orbit-c"></div>
-        <div class="particle-dust">${createParticles(28)}</div>
+        <div class="particle-dust">${createParticles(48)}</div>
       </div>
       <div class="view-grid chat-scene__content">
       <section class="panel">
