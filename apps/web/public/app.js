@@ -624,7 +624,7 @@ function renderNav() {
       const meta = viewMeta[view];
       return `
         <button class="nav-item ${currentView === view ? 'active' : ''}" data-view="${view}" aria-label="${meta.label}">
-          <span class="nav-code">${meta.code}</span>
+          <span class="material-symbols-outlined nav-icon" aria-hidden="true">${meta.icon}</span>
           <span class="nav-label">${meta.label}</span>
         </button>
       `;
@@ -643,22 +643,12 @@ function setView(view) {
   renderNav();
 }
 
-function renderViewHeader(eyebrow, title, copy, stats) {
+function renderViewHeader(title, copy) {
   return `
-    <section class="view-header">
-      <div>
-        <div class="eyebrow">${eyebrow}</div>
-        <h2 class="view-title">${title}</h2>
-        <p class="hero-summary">${copy}</p>
-      </div>
-      <div class="summary-grid">
-        ${stats.map(([label, value]) => `
-          <div class="summary-card">
-            <div class="panel-label">${label}</div>
-            <div class="summary-value">${value}</div>
-          </div>
-        `).join('')}
-      </div>
+    <section class="stitch-page-title">
+      <div class="eyebrow">Open Advisor</div>
+      <h2 class="stitch-page-title__heading">${title}</h2>
+      <p class="stitch-page-title__copy">${copy}</p>
     </section>
   `;
 }
@@ -688,13 +678,7 @@ function renderDashboard() {
   el('view-dashboard').innerHTML = `
     ${renderViewHeader(
       'Dashboard',
-      'Portfolio first, watchlist right below it',
-      'A calm market home for owned positions and names you want to track next. Green and red performance stays obvious, while moving names between lists stays one tap away.',
-      [
-        ['Portfolio', holdings.length],
-        ['Watchlist', watchlistAssets.length],
-        ['Cost basis', formatCurrency(state.portfolioSummary.estimatedCostBasis)]
-      ]
+      'Portfolio first, watchlist right below it. Keep owned names, future entries, and quick capture in one calm workspace.'
     )}
     <div class="view-grid">
       <section class="panel">
@@ -750,13 +734,7 @@ function renderInbox() {
   el('view-inbox').innerHTML = `
     ${renderViewHeader(
       'Inbox',
-      'Identity-linked market feed',
-      'Curated articles arrive in response to market changes, then get tagged against your beliefs so the feed reflects what you actually care about.',
-      [
-        ['Unread', state.inbox.filter((item) => item.state === 'new').length],
-        ['Beliefs', tags.length],
-        ['Filtered by', filterTag === 'all' ? 'All' : filterTag]
-      ]
+      'Identity-linked market coverage, organized around what you already own, track, and believe.'
     )}
     <div class="view-grid">
       <section class="panel">
@@ -842,13 +820,7 @@ function renderResearch() {
   el('view-research').innerHTML = `
     ${renderViewHeader(
       'Research',
-      'Search stocks, pull context, and inspect graphs',
-      'Research combines data, charts, and internet-style results in one place so users can go from a symbol to a quick read without leaving the app.',
-      [
-        ['Tracked names', state.portfolioSummary.trackedAssetsCount],
-        ['Saved reports', state.researchReports.length],
-        ['Latest query', query || 'Demo']
-      ]
+      'Search stocks, pull context, and inspect graphs without losing the thread of your portfolio or thesis work.'
     )}
     <div class="view-grid">
       <section class="form-card">
@@ -927,13 +899,7 @@ function renderChat() {
   el('view-chat').innerHTML = `
     ${renderViewHeader(
       'Chat',
-      'Talk to the advisor AI',
-      'Multiple chat threads let users separate portfolio questions, thesis work, and event follow-ups. Identity context stays visible so the AI can stay aligned with the investor worldview.',
-      [
-        ['Chats', uiState.chat.threads.length],
-        ['Belief context', identityTags.length],
-        ['Status', uiState.chat.isTyping ? 'Typing' : 'Ready']
-      ]
+      'Separate portfolio questions, thesis work, and follow-ups into focused conversations with the advisor.'
     )}
     <div class="view-grid">
       <section class="panel">
@@ -994,10 +960,6 @@ function renderAll() {
   el('workspace-title').textContent = uiState.settings.displayName || 'Open Advisor';
   el('status-label').textContent = isDemoMode ? 'Demo mode' : 'API connected';
   el('status-meta').textContent = uiState.settings.notifications ? 'Live market copilot' : 'Notifications muted';
-  el('metric-assets').textContent = state.portfolioSummary.trackedAssetsCount;
-  el('metric-positions').textContent = state.portfolioSummary.holdingsCount;
-  el('metric-inbox').textContent = state.inbox.filter((item) => item.state !== 'archived').length;
-  el('metric-beliefs').textContent = state.themes.length;
 
   renderNav();
   renderDashboard();
@@ -1301,5 +1263,5 @@ function openSettings(open) {
 uiState = loadUiState();
 refreshState().catch((error) => {
   el('status-label').textContent = 'API unavailable';
-  el('view-dashboard').innerHTML = `<section class="view-header"><div><span class="eyebrow">Load failure</span><h2 class="view-title">Open Advisor could not initialize.</h2><p class="hero-summary">${error.message}</p></div></section>`;
+  el('view-dashboard').innerHTML = `<section class="stitch-page-title"><div class="eyebrow">Load failure</div><h2 class="stitch-page-title__heading">Open Advisor could not initialize.</h2><p class="stitch-page-title__copy">${error.message}</p></section>`;
 });
