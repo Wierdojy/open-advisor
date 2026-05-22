@@ -650,11 +650,12 @@ function renderHeroArt(view) {
 }
 
 function renderNav() {
-  el('nav').innerHTML = views
+  const nav = el('nav');
+  nav.innerHTML = views
     .map((view) => {
       const meta = viewMeta[view];
       return `
-        <button class="nav-item ${currentView === view ? 'active' : ''}" data-view="${view}" aria-label="${meta.label}">
+        <button class="nav-item ${currentView === view ? 'active' : ''}" data-view="${view}" aria-label="${meta.label}" type="button">
           <span class="material-symbols-outlined nav-icon" aria-hidden="true">${meta.icon}</span>
           <span class="nav-label">${meta.label}</span>
         </button>
@@ -662,12 +663,16 @@ function renderNav() {
     })
     .join('');
 
-  document.querySelectorAll('[data-view]').forEach((button) => {
-    button.onclick = () => setView(button.dataset.view);
-  });
+  nav.onclick = (event) => {
+    const button = event.target.closest('[data-view]');
+    if (!button) return;
+    setView(button.dataset.view);
+  };
 }
 
 function setView(view) {
+  if (!view || view === currentView) return;
+
   const applyView = () => {
     currentView = view;
     document.body.dataset.view = view;
@@ -678,10 +683,15 @@ function setView(view) {
   };
 
   if (document.startViewTransition) {
-    document.startViewTransition(applyView);
-  } else {
-    applyView();
+    try {
+      document.startViewTransition(applyView);
+      return;
+    } catch {
+      // fall through to synchronous update
+    }
   }
+
+  applyView();
 }
 
 function renderViewHeader(view, title, copy) {
@@ -1019,6 +1029,7 @@ function renderAll() {
   renderChat();
   bindActions();
   setView(currentView);
+  if (!document.querySelector('.reveal-item')) armRevealAnimations();
 }
 
 function armRevealAnimations() {
@@ -1029,7 +1040,7 @@ function armRevealAnimations() {
 
   items.forEach((node, index) => {
     node.classList.add('reveal-item');
-    node.style.setProperty('--reveal-delay', `${Math.min(index * 45, 240)}ms`);
+    node.style.setProperty('--reveal-delay', `${Math.min(index * 20, 120)}ms`);
   });
 
   if (!('IntersectionObserver' in window)) {
