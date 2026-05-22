@@ -695,13 +695,13 @@ function setView(view) {
 function renderViewHeader(view, title, copy) {
   const meta = viewMeta[view] || viewMeta.dashboard;
   return `
-    <section class="stitch-page-title stitch-page-title--${meta.accent}">
+    <section class="stitch-page-title stitch-page-title--${meta.accent} ${view === 'chat' ? 'stitch-page-title--minimal' : ''}">
       <div class="stitch-page-title__copy-block">
         <div class="eyebrow">${meta.kicker}</div>
         <h2 class="stitch-page-title__heading">${title}</h2>
         <p class="stitch-page-title__copy">${copy}</p>
       </div>
-      ${renderHeroArt(view)}
+      ${view === 'chat' ? '' : renderHeroArt(view)}
     </section>
   `;
 }
