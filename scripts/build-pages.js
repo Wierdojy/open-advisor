@@ -12,6 +12,11 @@ for (const file of ['app.js', 'styles.css']) {
   fs.copyFileSync(path.join(publicDir, file), path.join(pagesDir, file));
 }
 
+const stitchDir = path.join(publicDir, 'stitch');
+if (fs.existsSync(stitchDir)) {
+  fs.cpSync(stitchDir, path.join(pagesDir, 'stitch'), { recursive: true });
+}
+
 const rawIndex = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
 const pagesIndex = rawIndex
   .replace('./styles.css', `./styles.css?v=${buildVersion}`)

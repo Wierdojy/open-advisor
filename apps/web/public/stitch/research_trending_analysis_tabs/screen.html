@@ -1,0 +1,354 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;700&amp;family=Geist:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style> 
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; } 
+        body { background-color: #f9f9fc; overflow-x: hidden; }
+        .ethereal-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(201, 194, 227, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 80% 20%, rgba(166, 204, 222, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 50% 80%, rgba(221, 190, 206, 0.3) 0%, transparent 50%),
+                #f9f9fc;
+            filter: blur(80px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#e5deff",
+                        "tertiary-fixed-dim": "#ddbece",
+                        "outline-variant": "#c9c5cd",
+                        "on-tertiary-fixed-variant": "#57404d",
+                        "inverse-primary": "#c9c2e3",
+                        "secondary-fixed": "#c1e8fa",
+                        "on-tertiary-fixed": "#281621",
+                        "secondary-container": "#c1e8fa",
+                        "surface": "#f9f9fc",
+                        "on-primary-fixed-variant": "#48435e",
+                        "outline": "#79767d",
+                        "on-primary-fixed": "#1c1830",
+                        "on-surface-variant": "#48464d",
+                        "on-tertiary-container": "#6d5563",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#2f3133",
+                        "surface-tint": "#605b77",
+                        "primary-container": "#d8d1f2",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#1a1c1e",
+                        "tertiary-container": "#edccdd",
+                        "surface-dim": "#d9dadd",
+                        "tertiary-fixed": "#fbdaeb",
+                        "on-secondary-fixed-variant": "#254c5a",
+                        "surface-container-highest": "#e2e2e5",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#446979",
+                        "primary": "#605b77",
+                        "surface-container": "#edeef1",
+                        "secondary-fixed-dim": "#a6ccde",
+                        "on-secondary-fixed": "#001f29",
+                        "tertiary": "#705765",
+                        "inverse-on-surface": "#f0f0f3",
+                        "surface-container-high": "#e8e8eb",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e2e2e5",
+                        "surface-bright": "#f9f9fc",
+                        "primary-fixed-dim": "#c9c2e3",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#f3f3f6",
+                        "on-background": "#1a1c1e",
+                        "on-primary-container": "#5d5974",
+                        "secondary": "#3e6373",
+                        "error": "#ba1a1a",
+                        "background": "#f9f9fc"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "vertical-rhythm": "64px",
+                        "unit": "4px",
+                        "gutter": "24px",
+                        "margin-desktop": "80px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Geist"],
+                        "body-md": ["Manrope"],
+                        "headline-lg-mobile": ["Manrope"],
+                        "display-lg": ["Manrope"],
+                        "headline-lg": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["11px", {"lineHeight": "1.0", "letterSpacing": "0.25em", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "300"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "200"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "0.01em", "fontWeight": "300"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="text-on-surface font-body-md selection:bg-primary-container/30">
+<div class="ethereal-bg"></div>
+<header class="fixed top-0 left-0 w-full z-[100] border-b border-outline-variant/15 px-margin-mobile md:px-margin-desktop h-vertical-rhythm flex justify-between items-center bg-surface/80 backdrop-blur-md">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-xl bg-[#605b77] flex items-center justify-center cursor-pointer overflow-hidden shadow-sm hover:opacity-90 transition-opacity"><span class="material-symbols-outlined text-white">person</span></div>
+<span class="font-label-caps text-label-caps tracking-[0.25em] text-primary">OPEN_ADVISOR</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary-container/20 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary">notifications</span>
+</button>
+</header>
+<main class="relative pt-[120px] pb-[100px] px-margin-mobile md:px-margin-desktop min-h-screen max-w-5xl mx-auto flex flex-col items-center">
+<div class="fixed left-margin-desktop top-0 h-screen vertical-guide hidden md:block"></div>
+<div class="fixed right-margin-desktop top-0 h-screen vertical-guide hidden md:block"></div>
+<section class="w-full mb-16 text-center relative z-10">
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface-variant mb-2">Research</h1>
+<p class="font-label-caps text-label-caps text-outline tracking-widest">EXPLORE ASSETS &amp; MARKET DATA</p>
+</section>
+<section class="w-full max-w-2xl mb-20 relative z-10">
+<div class="relative group" style="--mouse-x: 240px; --mouse-y: 65.203125px;">
+<div class="absolute inset-0 bg-primary-container/30 blur-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-700 rounded-full"></div>
+<div class="relative flex items-center bg-white/90 backdrop-blur-sm rounded-full px-6 py-4 shadow-sm border border-outline/30 transition-all duration-300 group-focus-within:border-primary group-focus-within:bg-white group-focus-within:shadow-lg">
+<span class="material-symbols-outlined text-outline mr-4">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full font-body-md text-on-surface placeholder:text-outline/50" placeholder="Search stocks, crypto, or indices..." type="text">
+<span class="material-symbols-outlined text-outline/40 cursor-pointer hover:text-primary transition-colors">keyboard_voice</span>
+</div>
+</div>
+</section><nav class="w-full max-w-2xl mx-auto flex justify-center gap-12 mb-10 relative z-10">
+<button class="tab-trigger active relative pb-2 group" data-tab="trending">
+<span class="font-label-caps text-label-caps tracking-[0.2em] transition-colors text-primary">TRENDING</span>
+<div class="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/20 via-primary to-primary/20 shadow-[0_0_8px_rgba(96,91,119,0.4)] opacity-100 transition-opacity duration-300"></div>
+</button>
+<button class="tab-trigger relative pb-2 group" data-tab="analysis">
+<span class="font-label-caps text-label-caps tracking-[0.2em] transition-colors text-outline hover:text-primary/70">ANALYSIS</span>
+<div class="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary/20 via-primary to-primary/20 shadow-[0_0_8px_rgba(96,91,119,0.4)] opacity-0 transition-opacity duration-300"></div>
+</button>
+</nav>
+<section class="w-full flex flex-col items-center relative z-10">
+<div class="w-full space-y-6 tab-content" id="trending-content">
+<!-- Result Item 1 -->
+<div class="bg-white/80 backdrop-blur-sm border border-outline-variant/30 w-full group relative overflow-hidden transition-all duration-500 hover:translate-y-[-2px] hover:shadow-md hover:bg-white" style="--mouse-x: 85px; --mouse-y: 56.203125px;">
+<div class="p-6 md:p-8 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="w-12 h-12 rounded-xl flex items-center justify-center border border-outline-variant/10 shadow-sm overflow-hidden">
+<img class="w-8 h-8 object-contain" data-alt="The minimalist, clean vector logo of a globally recognized technology company, presented in high-fidelity on a pure white square background. The aesthetic is modern, corporate, and premium, reflecting the high-end digital design system of the platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC04eSWGGj61k7O6sDs_zODjwORNFu776rO-HacLcqcXe7EVkKoverWhcO8XrvfQwx4lRW2a96T66bQwevU2o99MJch0WgdL4lYaUWB79fe-Mp4kxGXgEMAKiZb73wDH_ntFUt8d4qSRn2-NRKu4TflzBP5C91pS_WYVmAHVUdmdk3OcLDxeHiKus2fcPEqENzrZJoRVSr5M3oYNpUFFctRScu5QKkko_iyrHdGEQ28ulE0Wxq5jTD9ReUhv3WWZRQJmnXdZsjHwjy4">
+</div>
+<div>
+<h3 class="font-headline-lg-mobile text-[18px] font-bold text-on-surface">AAPL</h3>
+<p class="text-[12px] text-outline font-label-caps tracking-wider uppercase">Apple Inc.</p>
+</div>
+</div>
+<div class="hidden md:block w-32 h-12 opacity-30 group-hover:opacity-60 transition-opacity">
+<div class="w-full h-full flex items-end gap-1">
+<div class="w-1 h-3 bg-primary rounded-full"></div>
+<div class="w-1 h-5 bg-primary rounded-full"></div>
+<div class="w-1 h-4 bg-primary rounded-full"></div>
+<div class="w-1 h-8 bg-primary rounded-full"></div>
+<div class="w-1 h-6 bg-primary rounded-full"></div>
+<div class="w-1 h-9 bg-primary rounded-full"></div>
+<div class="w-1 h-7 bg-primary rounded-full"></div>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline-lg-mobile text-[20px] font-light text-on-surface">$189.43</p>
+<p class="text-[12px] text-emerald-500 font-medium">+1.24%</p>
+</div>
+</div>
+</div>
+<!-- Result Item 2 -->
+<div class="bg-white/80 backdrop-blur-sm border border-outline-variant/30 w-full group relative overflow-hidden transition-all duration-500 hover:translate-y-[-2px] hover:shadow-md hover:bg-white">
+<div class="p-6 md:p-8 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="w-12 h-12 rounded-xl flex items-center justify-center border border-outline-variant/10 shadow-sm overflow-hidden">
+<img class="w-8 h-8 object-contain" data-alt="The iconic Bitcoin symbol rendered in a sleek, minimalist style with subtle iridescent highlights. It is presented in a clean digital format suitable for a premium financial advisory dashboard. The surrounding space is clean white, emphasizing clarity and high-value digital assets." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWwtXhmGwutBajvlBfLfFz-WKxg_15-XVG4-aAhr-QUB2r4YOH943mKGL28lfyZXvHaE34w-KQAHHkFw10AfP97-t4GgcvKnqogv-SnciDMg4ew-m4y5rG_UWb_xvDL3iC9fhfgjPVvQlPWv6AnZiZRYbVZFsY40dcHo097Q7gpxU8uniUA2hsyge5Rz2fk1siK0UqAFBLuv2JYOge_x7uTrcS6jgKSy14ewi7Kwl16NTk4tk3YHcMRaZxBlzxsT6Tkv6jtwUjZZoC">
+</div>
+<div>
+<h3 class="font-headline-lg-mobile text-[18px] font-bold text-on-surface">BTC</h3>
+<p class="text-[12px] text-outline font-label-caps tracking-wider uppercase">Bitcoin</p>
+</div>
+</div>
+<div class="hidden md:block w-32 h-12 opacity-30 group-hover:opacity-60 transition-opacity">
+<div class="w-full h-full flex items-end gap-1">
+<div class="w-1 h-7 bg-primary rounded-full"></div>
+<div class="w-1 h-9 bg-primary rounded-full"></div>
+<div class="w-1 h-6 bg-primary rounded-full"></div>
+<div class="w-1 h-4 bg-primary rounded-full"></div>
+<div class="w-1 h-8 bg-primary rounded-full"></div>
+<div class="w-1 h-5 bg-primary rounded-full"></div>
+<div class="w-1 h-3 bg-primary rounded-full"></div>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline-lg-mobile text-[20px] font-light text-on-surface">$64,210.00</p>
+<p class="text-[12px] text-error font-medium">-0.82%</p>
+</div>
+</div>
+</div>
+<!-- Result Item 3 -->
+<div class="bg-white/80 backdrop-blur-sm border border-outline-variant/30 w-full group relative overflow-hidden transition-all duration-500 hover:translate-y-[-2px] hover:shadow-md hover:bg-white">
+<div class="p-6 md:p-8 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="w-12 h-12 rounded-xl flex items-center justify-center border border-outline-variant/10 shadow-sm overflow-hidden">
+<img class="w-8 h-8 object-contain" data-alt="A refined and modern logo for a global semiconductor company, featuring geometric precision and a clean aesthetic. The logo is displayed in high resolution against a minimal white background, integrating seamlessly with the ethereal and professional UI of the OPEN_ADVISOR platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4dBB0GpgDQLF9W93PRyO3RxhAC1dWLLarHs4N0JF1kyCgsZTFUBhjkMlikrisaaFS7OOvddc4WIDPNimKf5WCb6rW4ulrWHL2WutiLUjbaJOAKXMl1BdEEMXdbewe8c0JXdTvLqCbqLlE19rlc0PSOt_Ry1LtHLsVV1F6taK9WB049u96Kq7A3XZUC5lPJoccTvuenBB4EN7I2-t6LDDYK7bnltECmaWGGGJHguZIjVzvE3gKaxV-X4J7Cg4qBVR_xWBXc2Z9y5YV">
+</div>
+<div>
+<h3 class="font-headline-lg-mobile text-[18px] font-bold text-on-surface">NVDA</h3>
+<p class="text-[12px] text-outline font-label-caps tracking-wider uppercase">NVIDIA Corp.</p>
+</div>
+</div>
+<div class="hidden md:block w-32 h-12 opacity-30 group-hover:opacity-60 transition-opacity">
+<div class="w-full h-full flex items-end gap-1">
+<div class="w-1 h-2 bg-primary rounded-full"></div>
+<div class="w-1 h-4 bg-primary rounded-full"></div>
+<div class="w-1 h-6 bg-primary rounded-full"></div>
+<div class="w-1 h-8 bg-primary rounded-full"></div>
+<div class="w-1 h-10 bg-primary rounded-full"></div>
+<div class="w-1 h-11 bg-primary rounded-full"></div>
+<div class="w-1 h-12 bg-primary rounded-full"></div>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline-lg-mobile text-[20px] font-light text-on-surface">$875.28</p>
+<p class="text-[12px] text-emerald-500 font-medium">+3.45%</p>
+</div>
+</div>
+</div>
+</div><div class="tab-content hidden w-full space-y-8" id="analysis-content">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-white/80 backdrop-blur-sm border border-outline-variant/30 p-6 rounded-xl shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-label-caps text-[12px] text-on-surface tracking-wider">MARKET MOMENTUM</h4>
+<span class="material-symbols-outlined text-outline text-sm">query_stats</span>
+</div>
+<div class="h-48 flex items-end gap-2 px-2">
+<div class="flex-1 bg-primary/20 rounded-t-sm h-[40%] animate-pulse"></div>
+<div class="flex-1 bg-primary/40 rounded-t-sm h-[65%]"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm h-[50%]"></div>
+<div class="flex-1 bg-primary/60 rounded-t-sm h-[85%]"></div>
+<div class="flex-1 bg-primary/30 rounded-t-sm h-[30%]"></div>
+<div class="flex-1 bg-primary/50 rounded-t-sm h-[75%]"></div>
+</div>
+</div>
+<div class="bg-white/80 backdrop-blur-sm border border-outline-variant/30 p-6 rounded-xl shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-label-caps text-[12px] text-on-surface tracking-wider">VOLATILITY INDEX</h4>
+<span class="material-symbols-outlined text-outline text-sm">show_chart</span>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<span class="text-[14px] text-outline">RSI (14)</span>
+<span class="text-[14px] font-bold text-primary">62.4</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[62.4%]"></div>
+</div>
+<div class="flex justify-between items-center mt-2">
+<span class="text-[14px] text-outline">MACD</span>
+<span class="text-[14px] font-bold text-emerald-500">Bullish</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-white/80 backdrop-blur-sm border border-outline-variant/30 p-8 rounded-xl shadow-sm">
+<h4 class="font-label-caps text-[12px] text-on-surface tracking-wider mb-6">TECHNICAL OVERVIEW</h4>
+<div class="space-y-4">
+<div class="flex justify-between border-b border-outline-variant/10 pb-4">
+<span class="text-outline">Sentiment Analysis</span>
+<span class="font-medium text-on-surface">Strong Buy</span>
+</div>
+<div class="flex justify-between border-b border-outline-variant/10 pb-4">
+<span class="text-outline">Support Levels</span>
+<span class="font-medium text-on-surface">$182.50 | $178.20</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline">Resistance Levels</span>
+<span class="font-medium text-on-surface">$194.80 | $198.00</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 left-0 w-full z-50 border-t border-outline-variant/15 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] h-[72px] px-4 pb-safe flex justify-around items-center bg-surface/80 backdrop-blur-md">
+<a class="flex flex-col items-center justify-center text-outline dark:text-outline-variant opacity-60 hover:opacity-100 transition-opacity active:translate-y-[-2px] transition-transform duration-300" href="../portfolio_dashboard_ethereal_animated_balance_standardized_nav/screen.html"><span class="material-symbols-outlined mb-1">grid_view</span><span class="font-label-caps text-label-caps">Portfolio</span></a>
+<a class="flex flex-col items-center justify-center text-outline dark:text-outline-variant opacity-60 hover:opacity-100 transition-opacity active:translate-y-[-2px] transition-transform duration-300" href="../advisor_inbox_standardized_no_indicator/screen.html"><span class="material-symbols-outlined mb-1">mail</span><span class="font-label-caps text-label-caps">Inbox</span></a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim relative active:translate-y-[-2px] transition-transform duration-300" href="../research_trending_analysis_tabs/screen.html"><span class="material-symbols-outlined mb-1">analytics</span><span class="font-label-caps text-label-caps">Research</span></a>
+<a class="flex flex-col items-center justify-center text-outline dark:text-outline-variant opacity-60 hover:opacity-100 transition-opacity active:translate-y-[-2px] transition-transform duration-300" href="../advisor_chat_standardized_no_indicator/screen.html"><span class="material-symbols-outlined mb-1">chat</span><span class="font-label-caps text-label-caps">Chat</span></a>
+</nav>
+<script>
+    // Micro-interactions for scrolling
+    window.addEventListener('scroll', () => {
+        const nav = document.querySelector('header');
+        if (window.scrollY > 20) {
+            nav.classList.add('bg-surface/95');
+            nav.classList.remove('bg-surface/80');
+        } else {
+            nav.classList.add('bg-surface/80');
+            nav.classList.remove('bg-surface/95');
+        }
+    });
+
+    // Hover effect for result cards
+    const cards = document.querySelectorAll('.group');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            card.style.setProperty('--mouse-x', `${x}px`);
+            card.style.setProperty('--mouse-y', `${y}px`);
+        });
+    });
+</script>
+<script>
+  document.querySelectorAll('.tab-trigger').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      const target = trigger.getAttribute('data-tab');
+      
+      // Update tab triggers
+      document.querySelectorAll('.tab-trigger').forEach(t => {
+        t.classList.remove('active');
+        const label = t.querySelector('span');
+        const line = t.querySelector('div');
+        label.classList.replace('text-primary', 'text-outline');
+        line.classList.replace('opacity-100', 'opacity-0');
+      });
+      
+      trigger.classList.add('active');
+      trigger.querySelector('span').classList.replace('text-outline', 'text-primary');
+      trigger.querySelector('div').classList.replace('opacity-0', 'opacity-100');
+
+      // Update content visibility
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+      });
+      document.getElementById(`${target}-content`).classList.remove('hidden');
+    });
+  });
+</script></body></html>

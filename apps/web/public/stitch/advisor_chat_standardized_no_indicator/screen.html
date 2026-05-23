@@ -1,0 +1,301 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>OPEN_ADVISOR | AI Intelligence</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Fonts: Geist & Manrope -->
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#e5deff",
+                        "tertiary-fixed-dim": "#ddbece",
+                        "outline-variant": "#c9c5cd",
+                        "on-tertiary-fixed-variant": "#57404d",
+                        "inverse-primary": "#c9c2e3",
+                        "secondary-fixed": "#c1e8fa",
+                        "on-tertiary-fixed": "#281621",
+                        "secondary-container": "#c1e8fa",
+                        "surface": "#f9f9fc",
+                        "on-primary-fixed-variant": "#48435e",
+                        "outline": "#79767d",
+                        "on-primary-fixed": "#1c1830",
+                        "on-surface-variant": "#48464d",
+                        "on-tertiary-container": "#6d5563",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#2f3133",
+                        "surface-tint": "#605b77",
+                        "primary-container": "#d8d1f2",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#1a1c1e",
+                        "tertiary-container": "#edccdd",
+                        "surface-dim": "#d9dadd",
+                        "tertiary-fixed": "#fbdaeb",
+                        "on-secondary-fixed-variant": "#254c5a",
+                        "surface-container-highest": "#e2e2e5",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#446979",
+                        "primary": "#605b77",
+                        "surface-container": "#edeef1",
+                        "secondary-fixed-dim": "#a6ccde",
+                        "on-secondary-fixed": "#001f29",
+                        "tertiary": "#705765",
+                        "inverse-on-surface": "#f0f0f3",
+                        "surface-container-high": "#e8e8eb",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#e2e2e5",
+                        "surface-bright": "#f9f9fc",
+                        "primary-fixed-dim": "#c9c2e3",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#f3f3f6",
+                        "on-background": "#1a1c1e",
+                        "on-primary-container": "#5d5974",
+                        "secondary": "#3e6373",
+                        "error": "#ba1a1a",
+                        "background": "#f9f9fc"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "vertical-rhythm": "64px",
+                        "unit": "4px",
+                        "gutter": "24px",
+                        "margin-desktop": "80px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Geist"],
+                        "body-md": ["Manrope"],
+                        "headline-lg-mobile": ["Manrope"],
+                        "display-lg": ["Manrope"],
+                        "headline-lg": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["11px", { "lineHeight": "1.0", "letterSpacing": "0.25em", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "letterSpacing": "0.01em", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "fontWeight": "300" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "200" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "0.01em", "fontWeight": "300" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>body { 
+            background-color: #f9f9fc; 
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        /* Ethereal Iridescent Gradients Background */
+        .ethereal-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 10% 10%, rgba(201, 194, 227, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 90% 10%, rgba(166, 204, 222, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(221, 190, 206, 0.2) 0%, transparent 60%),
+                radial-gradient(circle at 20% 80%, rgba(193, 232, 250, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 80% 90%, rgba(216, 209, 242, 0.3) 0%, transparent 40%),
+                #f9f9fc;
+            filter: blur(60px);
+        }
+        .glass-panel { 
+            background: rgba(255, 255, 255, 0.7); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4); 
+        } 
+        .orb-glow { 
+            filter: drop-shadow(0 0 30px rgba(201, 194, 227, 0.5)); 
+            animation: float 8s ease-in-out infinite; 
+        } 
+        @keyframes float { 
+            0%, 100% { transform: translateY(0) rotate(0deg) scale(1); } 
+            50% { transform: translateY(-20px) rotate(3deg) scale(1.05); } 
+        } 
+        .message-stream::-webkit-scrollbar { width: 4px; } 
+        .message-stream::-webkit-scrollbar-thumb { background: rgba(121, 118, 125, 0.2); border-radius: 10px; } 
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }</style>
+</head>
+<body class="font-body-md text-on-surface flex flex-col items-center">
+<!-- Ethereal Background Layer -->
+<div class="ethereal-bg"></div>
+<!-- TopAppBar -->
+<header class="fixed top-0 z-[60] w-full border-b border-outline-variant/15 flex justify-between items-center px-margin-mobile md:px-margin-desktop h-vertical-rhythm bg-surface/80 backdrop-blur-md">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30 flex items-center justify-center bg-primary">
+<span class="material-symbols-outlined text-sm text-on-primary">person</span>
+</div>
+<span class="font-label-caps text-label-caps tracking-[0.25em] text-primary">OPEN_ADVISOR</span>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="md:hidden text-on-surface-variant">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="w-full max-w-4xl min-h-screen pt-[120px] pb-[140px] px-margin-mobile md:px-margin-desktop flex flex-col items-center relative">
+<!-- Background Ethereal Orb -->
+<div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20 pointer-events-none z-0">
+<img class="w-[600px] h-[600px] object-contain orb-glow" data-alt="A highly detailed, translucent iridescent sphere floating in a minimalist digital void. The orb features complex internal structures resembling glass layers and ethereal energy paths, illuminated by soft pastel light." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmDF2x4nFUImoZyfhFssV1mRNr6UvcV_c8-NFbFuSx63yZnWlTBmqRQe0RtCN6hlMsryFhvzE3edMxeRMPzRMXrpw4lOzRHUsIP5ox8CwKQUEtpgEvZ0RjbNhKE5q-5SUr8Y7gIseXSnAUAUHMkmRXAvmuwkFkSf9YcKIspPV5MDPPQBqBVJ0eLymBOb-uDMsOYWciHgRM02V1xkkgK5IIwc-D46cYqBgcfYnYXlcwLuP7JH62gntrcPoKBMIZysjN-GAfCOJRYW_7">
+</div>
+<!-- Advisor Context / Floating Orb Indicator -->
+<div class="relative z-10 flex flex-col items-center mb-12">
+<div class="relative w-24 h-24 mb-4">
+<div class="absolute inset-0 rounded-full border border-primary/20 animate-ping"></div>
+<div class="relative w-full h-full rounded-full glass-panel flex items-center justify-center border border-primary/30 shadow-2xl overflow-hidden">
+<!-- Internal Glow Effect for Orb Integration -->
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/10 via-secondary/10 to-tertiary/10 opacity-50"></div>
+<span class="material-symbols-outlined text-primary text-4xl animate-pulse relative z-10" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+</div>
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary text-center">Open Advisor</h1>
+<p class="font-label-caps text-label-caps text-outline opacity-70 mt-2">READY FOR ANALYSIS</p>
+</div>
+<!-- Chat Stream -->
+<section class="w-full space-y-8 z-10 overflow-y-auto message-stream">
+<!-- User Message -->
+<div class="flex justify-end w-full">
+<div class="max-w-[85%] glass-panel rounded-full px-6 py-3 shadow-sm">
+<p class="text-on-surface/90 text-sm md:text-base">Can you analyze the current performance of my portfolio relative to the NASDAQ-100? Focus on the tech exposure.</p>
+</div>
+</div>
+<!-- Advisor Message -->
+<div class="flex justify-start w-full">
+<div class="max-w-[95%] w-full glass-panel rounded-3xl p-6 md:p-8 shadow-sm space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">colors_spark</span>
+<span class="font-label-caps text-label-caps text-primary">ANALYSIS COMPLETE</span>
+</div>
+<p class="text-on-surface-variant leading-relaxed">Your portfolio currently has a **tech exposure of 64.2%**, which represents an overweight position compared to the NASDAQ-100 (approximately 58.1%). While this has driven outsized gains during the recent semi-conductor rally, it introduces volatility risk.</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+<div class="p-4 rounded-xl bg-primary/5 border border-primary/10">
+<span class="font-label-caps text-label-caps text-outline block mb-1">PORTFOLIO BETA</span>
+<span class="text-2xl font-light text-primary">1.24</span>
+</div>
+<div class="p-4 rounded-xl bg-secondary/5 border border-secondary/10">
+<span class="font-label-caps text-label-caps text-outline block mb-1">DIVERSIFICATION SCORE</span>
+<span class="text-2xl font-light text-secondary">72/100</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/10">
+<th class="py-3 font-label-caps text-label-caps text-outline">SECTOR</th>
+<th class="py-3 font-label-caps text-label-caps text-outline">WEIGHT</th>
+<th class="py-3 font-label-caps text-label-caps text-outline">PERF (1M)</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-outline-variant/5">
+<td class="py-3 text-on-surface">Information Tech</td>
+<td class="py-3 text-on-surface font-medium">64.2%</td>
+<td class="py-3 text-emerald-600">+12.4%</td>
+</tr>
+<tr class="border-b border-outline-variant/5">
+<td class="py-3 text-on-surface">Communication</td>
+<td class="py-3 text-on-surface">12.1%</td>
+<td class="py-3 text-emerald-600">+4.2%</td>
+</tr>
+<tr>
+<td class="py-3 text-on-surface">Financial Services</td>
+<td class="py-3 text-on-surface">8.5%</td>
+<td class="py-3 text-rose-500">-1.1%</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex justify-end w-full">
+<div class="max-w-[85%] glass-panel rounded-full px-6 py-3 shadow-sm">
+<p class="text-on-surface/90 text-sm md:text-base">What are the suggested rebalancing steps?</p>
+</div>
+</div>
+<!-- Advisor "Thinking" Indicator -->
+<div class="flex justify-start w-full opacity-80">
+<div class="flex items-center gap-2 px-6 py-3 glass-panel rounded-full border border-primary/20 shadow-sm">
+<div class="flex gap-1">
+<div class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 0s"></div>
+<div class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+<div class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+</div>
+<span class="font-label-caps text-label-caps text-primary text-[10px]">ADVISOR IS CALCULATING...</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Interface (Prompt Bar & FAB) -->
+<div class="fixed bottom-0 w-full z-50 flex flex-col items-center">
+<!-- Prompt Bar -->
+<div class="w-full max-w-3xl px-margin-mobile mb-4">
+<div class="glass-panel rounded-full border border-outline-variant/30 shadow-2xl p-2 flex items-center gap-2 group focus-within:border-primary/50 transition-all">
+<button class="p-3 text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined">mic</span>
+</button>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline/60 font-body-md py-2" placeholder="Ask advisor..." type="text">
+<button class="p-3 bg-primary rounded-full text-white hover:bg-primary/90 transition-all shadow-lg">
+<span class="material-symbols-outlined">arrow_upward</span>
+</button>
+</div>
+</div>
+<!-- Bottom Navigation Shell -->
+<nav class="w-full border-t border-outline-variant/15 h-[72px] flex justify-around items-center px-4 pb-safe shadow-[0_-8px_30px_rgb(0,0,0,0.02)] bg-surface/80 backdrop-blur-md">
+<a class="flex flex-col items-center justify-center text-outline opacity-60 hover:opacity-100 transition-opacity" href="../portfolio_dashboard_ethereal_animated_balance_standardized_nav/screen.html">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-label-caps text-label-caps mt-1">Portfolio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline opacity-60 hover:opacity-100 transition-opacity" href="../advisor_inbox_standardized_no_indicator/screen.html">
+<span class="material-symbols-outlined">mail</span>
+<span class="font-label-caps text-label-caps mt-1">Inbox</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline opacity-60 hover:opacity-100 transition-opacity" href="../research_trending_analysis_tabs/screen.html">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-caps text-label-caps mt-1">Research</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary relative group" href="../advisor_chat_standardized_no_indicator/screen.html"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat</span><span class="font-label-caps text-label-caps mt-1">Chat</span></a>
+</nav>
+</div>
+<!-- Micro-interaction Scripts -->
+<script>
+        // Smooth scroll to bottom on load
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+        // Add subtle mouse-follow glow to glass cards
+        const glassPanels = document.querySelectorAll('.glass-panel');
+        glassPanels.forEach(panel => {
+            panel.addEventListener('mousemove', (e) => {
+                const rect = panel.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                panel.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 70%)`;
+            });
+            panel.addEventListener('mouseleave', () => {
+                panel.style.background = 'rgba(255, 255, 255, 0.7)';
+            });
+        });
+    </script>
+</body></html>

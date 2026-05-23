@@ -1,0 +1,257 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>OPEN_ADVISOR - Advisor Inbox</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#e5deff",
+                    "tertiary-fixed-dim": "#ddbece",
+                    "outline-variant": "#c9c5cd",
+                    "on-tertiary-fixed-variant": "#57404d",
+                    "inverse-primary": "#c9c2e3",
+                    "secondary-fixed": "#c1e8fa",
+                    "on-tertiary-fixed": "#281621",
+                    "secondary-container": "#c1e8fa",
+                    "surface": "#f9f9fc",
+                    "on-primary-fixed-variant": "#48435e",
+                    "outline": "#79767d",
+                    "on-primary-fixed": "#1c1830",
+                    "on-surface-variant": "#48464d",
+                    "on-tertiary-container": "#6d5563",
+                    "on-secondary": "#ffffff",
+                    "inverse-surface": "#2f3133",
+                    "surface-tint": "#605b77",
+                    "primary-container": "#d8d1f2",
+                    "on-tertiary": "#ffffff",
+                    "on-surface": "#1a1c1e",
+                    "tertiary-container": "#edccdd",
+                    "surface-dim": "#d9dadd",
+                    "tertiary-fixed": "#fbdaeb",
+                    "on-secondary-fixed-variant": "#254c5a",
+                    "surface-container-highest": "#e2e2e5",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-container": "#446979",
+                    "primary": "#605b77",
+                    "surface-container": "#edeef1",
+                    "secondary-fixed-dim": "#a6ccde",
+                    "on-secondary-fixed": "#001f29",
+                    "tertiary": "#705765",
+                    "inverse-on-surface": "#f0f0f3",
+                    "surface-container-high": "#e8e8eb",
+                    "error-container": "#ffdad6",
+                    "surface-variant": "#e2e2e5",
+                    "surface-bright": "#f9f9fc",
+                    "primary-fixed-dim": "#c9c2e3",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#f3f3f6",
+                    "on-background": "#1a1c1e",
+                    "on-primary-container": "#5d5974",
+                    "secondary": "#3e6373",
+                    "error": "#ba1a1a",
+                    "background": "#f9f9fc"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "vertical-rhythm": "64px",
+                    "unit": "4px",
+                    "gutter": "24px",
+                    "margin-desktop": "80px",
+                    "margin-mobile": "20px"
+            },
+            "fontFamily": {
+                    "label-caps": ["Geist"],
+                    "body-md": ["Manrope"],
+                    "headline-lg-mobile": ["Manrope"],
+                    "display-lg": ["Manrope"],
+                    "headline-lg": ["Manrope"]
+            },
+            "fontSize": {
+                    "label-caps": ["11px", {"lineHeight": "1.0", "letterSpacing": "0.25em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "300"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "200"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "0.01em", "fontWeight": "300"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+    .glass-panel { border: 1px solid rgba(121, 118, 125, 0.2); }
+    body { min-height: 100vh; position: relative; }
+    /* Ethereal Iridescent Gradients Background matching SCREEN_57 style */
+    .ethereal-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: 
+          radial-gradient(circle at 20% 30%, rgba(201, 194, 227, 0.3) 0%, transparent 40%),
+          radial-gradient(circle at 80% 20%, rgba(166, 204, 222, 0.3) 0%, transparent 40%),
+          radial-gradient(circle at 50% 80%, rgba(221, 190, 206, 0.3) 0%, transparent 50%),
+          #f9f9fc;
+      filter: blur(80px);
+    }
+    .iridescent-glow {
+      background: linear-gradient(135deg, #fbdaeb 0%, #c1e8fa 50%, #e5deff 100%);
+      opacity: 0.8;
+    }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen selection:bg-primary-container selection:text-on-primary-container relative overflow-x-hidden">
+<!-- Ethereal Background Layer -->
+<div class="ethereal-bg"></div>
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop h-vertical-rhythm border-b border-outline-variant/15 bg-surface/80 backdrop-blur-md">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary border border-outline/10 shadow-sm">
+<span class="material-symbols-outlined text-xl">person</span>
+</div>
+<h1 class="font-label-caps text-label-caps tracking-[0.25em] text-primary">OPEN_ADVISOR</h1>
+</div>
+<div class="flex items-center gap-6">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-2 rounded-full transition-all active:scale-95 duration-200">notifications</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="relative pb-40 px-margin-mobile md:px-margin-desktop max-w-5xl mx-auto z-10 pt-[120px]"><div class="mb-8 text-center"><section class="w-full mb-16 text-center relative z-10">
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface-variant mb-2">Inbox</h1>
+<p class="font-label-caps text-label-caps text-outline tracking-widest">STRATEGY ALERTS &amp; INSIGHTS</p>
+</section></div>
+<div class="mb-10 flex flex-col items-center">
+<div class="w-full max-w-2xl relative group">
+<span class="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-outline/60 group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full h-16 pl-16 pr-16 border border-outline-variant/20 rounded-full focus:ring-0 focus:border-primary/40 transition-all font-body-md text-on-surface placeholder:text-outline/50 shadow-sm bg-surface/90 backdrop-blur-sm" placeholder="Search strategy alerts, insights, or logs..." type="text">
+<button class="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 text-outline/60 hover:text-primary transition-colors">mic</button>
+<div class="absolute -bottom-[1px] left-1/2 -translate-x-1/2 w-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent transition-all duration-700 group-focus-within:w-full"></div>
+</div>
+</div>
+<div class="overflow-x-auto hide-scrollbar">
+<div class="flex justify-start gap-3 pb-2 flex-nowrap whitespace-nowrap">
+<button class="px-6 h-9 rounded-full bg-primary-container text-on-primary-container font-label-caps text-label-caps flex items-center justify-center border border-primary/20 shrink-0">ALL</button>
+<button class="px-6 h-9 rounded-full bg-surface/40 text-on-surface-variant font-label-caps text-label-caps flex items-center justify-center border border-outline-variant/20 hover:bg-surface/60 transition-colors shrink-0">UNREAD</button>
+<button class="px-6 h-9 rounded-full bg-surface/40 text-on-surface-variant font-label-caps text-label-caps flex items-center justify-center border border-outline-variant/20 hover:bg-surface/60 transition-colors shrink-0">ALERTS</button>
+<button class="px-6 h-9 rounded-full bg-surface/40 text-on-surface-variant font-label-caps text-label-caps flex items-center justify-center border border-outline-variant/20 hover:bg-surface/60 transition-colors shrink-0">REPORTS</button>
+<button class="px-6 h-9 rounded-full bg-surface/40 text-on-surface-variant font-label-caps text-label-caps flex items-center justify-center border border-outline-variant/20 hover:bg-surface/60 transition-colors shrink-0">ARCHIVED</button>
+</div>
+</div>
+<div class="space-y-4 mt-8">
+<div class="group relative p-6 rounded-xl cursor-pointer hover:bg-surface-container-lowest/70 transition-all duration-300 transform hover:-translate-y-1 bg-surface-container-lowest/80 border border-outline-variant/30 backdrop-blur-sm">
+<div class="absolute left-0 top-0 bottom-0 w-1 iridescent-glow rounded-l-xl"></div>
+<div class="flex items-start gap-6">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-tertiary-container/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: &quot;FILL&quot; 1;">bolt</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-bold text-on-surface font-body-md tracking-tight">Alpha System</h3>
+<span class="font-label-caps text-[10px] text-outline uppercase tracking-wider">10:42 AM</span>
+</div>
+<p class="font-semibold text-primary mb-2 line-clamp-1">STRATEGY ALERT: Rebalancing Opportunity Detected</p>
+<p class="text-sm line-clamp-2 leading-relaxed text-on-surface-variant">The recent market volatility in tech sectors has opened a high-probability rebalancing window for the Aggressive Growth portfolio. Action recommended within 24 hours.</p>
+</div>
+</div>
+</div>
+<div class="group p-6 rounded-xl cursor-pointer hover:bg-surface-container-lowest/70 transition-all duration-300 bg-surface-container-lowest/80 border border-outline-variant/30 backdrop-blur-sm">
+<div class="flex items-start gap-6">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-secondary-container/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary">trending_up</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-on-surface-variant font-body-md">Market Pulse</h3>
+<span class="font-label-caps text-[10px] text-outline uppercase tracking-wider">Yesterday</span>
+</div>
+<p class="text-on-surface-variant/90 mb-2 line-clamp-1 text-on-surface-variant">Weekly Market Sentiment: Neutral to Bullish</p>
+<p class="text-sm line-clamp-2 leading-relaxed text-on-surface-variant">Summary of key indices and macroeconomic indicators for the week ending Friday. Federal reserve comments suggest a holding pattern...</p>
+</div>
+</div>
+</div>
+<div class="group relative p-6 rounded-xl cursor-pointer hover:bg-surface-container-lowest/70 transition-all duration-300 transform hover:-translate-y-1 bg-surface-container-lowest/80 border border-outline-variant/30 backdrop-blur-sm">
+<div class="absolute left-0 top-0 bottom-0 w-1 iridescent-glow rounded-l-xl"></div>
+<div class="flex items-start gap-6">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-primary-container/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: &quot;FILL&quot; 1;">verified_user</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-bold text-on-surface font-body-md tracking-tight">Security Protocol</h3>
+<span class="font-label-caps text-[10px] text-outline uppercase tracking-wider">Yesterday</span>
+</div>
+<p class="font-semibold text-primary mb-2 line-clamp-1">New API Connection Verified: Portfolio Tracker X</p>
+<p class="text-sm line-clamp-2 leading-relaxed text-on-surface-variant">A new data connection has been established. If this was not you, please immediately revoke access in your Advisor settings.</p>
+</div>
+</div>
+</div>
+<div class="group p-6 rounded-xl cursor-pointer hover:bg-surface-container-lowest/70 transition-all duration-300 bg-surface-container-lowest/80 border border-outline-variant/30 backdrop-blur-sm">
+<div class="flex items-start gap-6">
+<div class="flex-shrink-0 w-12 h-12 rounded-full bg-outline-variant/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-outline">description</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-on-surface-variant font-body-md">Compliance Desk</h3>
+<span class="font-label-caps text-[10px] text-outline uppercase tracking-wider">Oct 24</span>
+</div>
+<p class="text-on-surface-variant/90 mb-2 line-clamp-1 text-on-surface-variant">Updated Terms of Service for Advisory Partners</p>
+<p class="text-sm line-clamp-2 leading-relaxed text-on-surface-variant">We have updated our internal data handling policies to better reflect the latest GDPR standards and privacy protections...</p>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-16 flex flex-col items-center">
+<div class="w-[1px] h-12 bg-gradient-to-b from-outline/20 to-transparent mb-6"></div>
+<button class="font-label-caps text-label-caps text-outline hover:text-primary tracking-[0.3em] transition-colors">LOAD EARLIER ARCHIVE</button>
+</div></main>
+<!-- BottomNavBar: Updated with labels Portfolio, Inbox, Research, Chat -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-[72px] px-4 pb-safe border-t border-outline-variant/15 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] z-[60] bg-surface/90 backdrop-blur-md">
+<a class="flex flex-col items-center justify-center text-outline opacity-60 hover:opacity-100 transition-opacity" href="../portfolio_dashboard_ethereal_animated_balance_standardized_nav/screen.html">
+<span class="material-symbols-outlined mb-1">grid_view</span>
+<span class="font-label-caps text-[10px] tracking-widest uppercase">Portfolio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary relative translate-y-[-2px]" href="../advisor_inbox_standardized_no_indicator/screen.html">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: &quot;FILL&quot; 1;">mail</span>
+<span class="font-label-caps text-[10px] tracking-widest uppercase">Inbox</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline opacity-60 hover:opacity-100 transition-opacity" href="../research_trending_analysis_tabs/screen.html">
+<span class="material-symbols-outlined mb-1">analytics</span>
+<span class="font-label-caps text-[10px] tracking-widest uppercase">Research</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline opacity-60 hover:opacity-100 transition-opacity" href="../advisor_chat_standardized_no_indicator/screen.html">
+<span class="material-symbols-outlined mb-1">chat</span>
+<span class="font-label-caps text-[10px] tracking-widest uppercase">Chat</span>
+</a>
+</nav>
+<script>
+        // Simple Interaction: Scale effect on items
+        document.querySelectorAll('.glass-panel').forEach(item => {
+            item.addEventListener('mousedown', () => {
+                item.style.transform = 'scale(0.985) translateY(0px)';
+            });
+            item.addEventListener('mouseup', () => {
+                item.style.transform = 'translateY(-4px)';
+            });
+        });
+    </script>
+
+
+</body></html>

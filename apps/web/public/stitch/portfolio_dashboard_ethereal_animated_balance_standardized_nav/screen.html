@@ -1,0 +1,389 @@
+<!DOCTYPE html><html class="light" lang="en"><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><head></head><body class="text-on-surface font-body-md overflow-x-hidden selection:bg-primary-container">
+
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>OPEN_ADVISOR - Portfolio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "tertiary-fixed-dim": "#ddbece",
+                "surface-dim": "#d9dadd",
+                "surface-container-highest": "#e2e2e5",
+                "on-primary-fixed": "#1c1830",
+                "inverse-surface": "#2f3133",
+                "background": "#f9f9fc",
+                "secondary-container": "#c1e8fa",
+                "on-surface-variant": "#48464d",
+                "on-secondary": "#ffffff",
+                "secondary": "#3e6373",
+                "error-container": "#ffdad6",
+                "on-error-container": "#93000a",
+                "on-primary-container": "#5d5974",
+                "outline": "#79767d",
+                "on-tertiary": "#ffffff",
+                "tertiary": "#705765",
+                "on-background": "#1a1c1e",
+                "primary-fixed": "#e5deff",
+                "on-secondary-container": "#446979",
+                "on-primary-fixed-variant": "#48435e",
+                "error": "#ba1a1a",
+                "on-surface": "#1a1c1e",
+                "secondary-fixed": "#c1e8fa",
+                "on-tertiary-fixed": "#281621",
+                "surface-variant": "#e2e2e5",
+                "on-tertiary-fixed-variant": "#57404d",
+                "secondary-fixed-dim": "#a6ccde",
+                "surface": "#f9f9fc",
+                "primary-fixed-dim": "#c9c2e3",
+                "surface-container-low": "#f3f3f6",
+                "surface-container-lowest": "#ffffff",
+                "outline-variant": "#c9c5cd",
+                "tertiary-fixed": "#fbdaeb",
+                "surface-container-high": "#e8e8eb",
+                "surface-container": "#edeef1",
+                "on-primary": "#ffffff",
+                "tertiary-container": "#edccdd",
+                "primary-container": "#d8d1f2",
+                "on-secondary-fixed": "#001f29",
+                "on-secondary-fixed-variant": "#254c5a",
+                "inverse-primary": "#c9c2e3",
+                "surface-bright": "#f9f9fc",
+                "on-error": "#ffffff",
+                "surface-tint": "#605b77",
+                "primary": "#605b77",
+                "inverse-on-surface": "#f0f0f3",
+                "on-tertiary-container": "#6d5563",
+                "success-vibrant": "#008a4f"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+            },
+            "spacing": {
+                "margin-mobile": "20px",
+                "gutter": "24px",
+                "margin-desktop": "80px",
+                "vertical-rhythm": "64px",
+                "unit": "4px"
+            },
+            "fontFamily": {
+                "label-caps": ["Geist"],
+                "headline-lg": ["Manrope"],
+                "headline-lg-mobile": ["Manrope"],
+                "body-md": ["Manrope"],
+                "display-lg": ["Manrope"]
+            },
+            "fontSize": {
+                "label-caps": ["11px", {"lineHeight": "1.0", "letterSpacing": "0.25em", "fontWeight": "500"}],
+                "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "0.01em", "fontWeight": "300"}],
+                "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "300"}],
+                "body-md": ["16px", {"lineHeight": "1.6", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "200"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-panel { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+        .sparkline { height: 20px; width: 60px; }
+        body { min-height: max(884px, 100dvh); position: relative; }
+        
+        .ethereal-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(201, 194, 227, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 80% 20%, rgba(166, 204, 222, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 50% 80%, rgba(221, 190, 206, 0.3) 0%, transparent 50%),
+                #f9f9fc;
+            filter: blur(80px);
+        }
+
+        .iridescent-text {
+            background: linear-gradient(135deg, #605b77 0%, #705765 30%, #3e6373 60%, #605b77 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: shine 8s linear infinite;
+        }
+
+        .shimmer-value {
+            background: linear-gradient(
+                90deg, 
+                #705765 0%, 
+                #3e6373 25%, 
+                #605b77 50%, 
+                #ddbece 75%, 
+                #705765 100%
+            );
+            background-size: 300% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: flow 10s ease infinite;
+        }
+
+        @keyframes flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        @keyframes drift {
+            from { transform: rotate(0deg) scale(1); }
+            to { transform: rotate(15deg) scale(1.1); }
+        }
+    </style>
+<!-- Ethereal Background Layer -->
+<div class="ethereal-bg"></div>
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 w-full z-50 bg-white/30 backdrop-blur-xl border-b border-white/20 flex justify-between items-center px-margin-mobile md:px-margin-desktop h-vertical-rhythm">
+<div class="flex items-center gap-3 active:scale-95 duration-200 cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center overflow-hidden shadow-sm">
+<span class="material-symbols-outlined text-on-primary text-xl" style="font-variation-settings: &quot;FILL&quot; 1;">person</span>
+</div>
+<span class="font-label-caps text-label-caps tracking-[0.25em] text-primary drop-shadow-sm">OPEN_ADVISOR</span>
+</div>
+<div class="flex items-center gap-6">
+<button class="material-symbols-outlined text-primary hover:bg-white/40 p-2 rounded-full transition-colors active:scale-95 duration-200">notifications</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="relative pt-32 pb-32 px-margin-mobile md:px-margin-desktop max-w-4xl mx-auto flex flex-col items-center">
+<!-- Account Balance Header -->
+<section class="text-center mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+<span class="font-label-caps text-label-caps text-outline mb-2 block uppercase">Current Portfolio Value</span>
+<h1 class="font-display-lg text-display-lg shimmer-value tracking-tight">$142,580.42</h1>
+<div class="flex items-center justify-center gap-2 mt-2">
+<span class="material-symbols-outlined text-sm text-success-vibrant" style="font-variation-settings: &quot;FILL&quot; 1;">trending_up</span>
+<span class="text-success-vibrant font-label-caps text-label-caps font-semibold">+2.4% TODAY</span>
+</div>
+</section>
+<!-- Bento Layout: Portfolio Modules -->
+<div class="w-full space-y-gutter">
+<!-- Watchlist Section -->
+<section class="glass-panel rounded-xl p-6 transition-all hover:shadow-xl hover:border-primary/30 opacity-0 duration-1000 opacity-100">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-label-caps text-label-caps text-primary tracking-widest uppercase font-semibold">Watchlist</h2>
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">more_vert</span>
+</div>
+<div class="space-y-4">
+<!-- Ticker Item 1 -->
+<div class="flex items-center justify-between group cursor-pointer border-b border-outline-variant/10 pb-4">
+<div class="flex gap-4 items-center">
+<div class="w-10 h-10 flex items-center justify-center font-label-caps text-primary font-bold">AAPL</div>
+<div>
+<p class="font-body-md text-on-surface font-medium">Apple Inc.</p>
+<p class="text-[10px] font-label-caps text-outline uppercase font-medium">Technology</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="sparkline bg-primary/5 rounded relative overflow-hidden">
+<svg class="w-full h-full" viewBox="0 0 100 40">
+<path d="M0 20 Q 25 5, 50 25 T 100 15" fill="none" stroke="#605b77" stroke-width="2"></path>
+</svg>
+</div>
+<div class="text-right min-w-[60px]">
+<p class="font-body-md text-success-vibrant font-semibold">+1.24%</p>
+</div>
+</div>
+</div>
+<!-- Ticker Item 2 -->
+<div class="flex items-center justify-between group cursor-pointer border-b border-outline-variant/10 pb-4">
+<div class="flex gap-4 items-center">
+<div class="w-10 h-10 flex items-center justify-center font-label-caps text-primary font-bold">NVDA</div>
+<div>
+<p class="font-body-md text-on-surface font-medium">Nvidia Corp.</p>
+<p class="text-[10px] font-label-caps text-outline uppercase font-medium">Semiconductors</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="sparkline bg-primary/5 rounded relative overflow-hidden">
+<svg class="w-full h-full" viewBox="0 0 100 40">
+<path d="M0 30 Q 30 10, 60 35 T 100 5" fill="none" stroke="#605b77" stroke-width="2"></path>
+</svg>
+</div>
+<div class="text-right min-w-[60px]">
+<p class="font-body-md text-success-vibrant font-semibold">+3.82%</p>
+</div>
+</div>
+</div>
+<!-- Ticker Item 3 -->
+<div class="flex items-center justify-between group cursor-pointer pb-2">
+<div class="flex gap-4 items-center">
+<div class="w-10 h-10 flex items-center justify-center font-label-caps text-primary font-bold">BTC</div>
+<div>
+<p class="font-body-md text-on-surface font-medium">Bitcoin</p>
+<p class="text-[10px] font-label-caps text-outline uppercase font-medium">Crypto</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="sparkline bg-error/5 rounded">
+<svg class="w-full h-full" viewBox="0 0 100 40">
+<path d="M0 5 Q 40 35, 70 15 T 100 35" fill="none" stroke="#ba1a1a" stroke-width="2"></path>
+</svg>
+</div>
+<div class="text-right min-w-[60px]">
+<p class="font-body-md text-error font-semibold">-0.45%</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Current Positions Section -->
+<section class="glass-panel rounded-xl p-6 transition-all hover:shadow-xl hover:border-primary/30 opacity-0 duration-1000 opacity-100">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-label-caps text-label-caps text-primary tracking-widest uppercase font-semibold">Current Positions</h2>
+<span class="font-label-caps text-[10px] text-outline font-medium">8 ASSETS</span>
+</div>
+<div class="space-y-4">
+<!-- VOO Item -->
+<div class="flex items-center justify-between group cursor-pointer border-b border-outline-variant/10 pb-4">
+<div class="flex gap-4 items-center">
+<div class="w-10 h-10 flex items-center justify-center font-label-caps text-primary font-bold">VOO</div>
+<div>
+<p class="font-body-md text-on-surface font-medium">S&amp;P 500 ETF</p>
+<p class="text-[10px] font-label-caps text-outline uppercase font-medium">45% Weight</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="sparkline bg-primary/5 rounded relative overflow-hidden">
+<svg class="w-full h-full" viewBox="0 0 100 40">
+<path d="M0 25 Q 40 15, 70 20 T 100 10" fill="none" stroke="#605b77" stroke-width="2"></path>
+</svg>
+</div>
+<div class="text-right min-w-[60px]">
+<p class="font-body-md text-success-vibrant font-semibold">+0.85%</p>
+</div>
+</div>
+</div>
+<!-- TSLA Item -->
+<div class="flex items-center justify-between group cursor-pointer pb-2">
+<div class="flex gap-4 items-center">
+<div class="w-10 h-10 flex items-center justify-center font-label-caps text-primary font-bold">TSLA</div>
+<div>
+<p class="font-body-md text-on-surface font-medium">Tesla Inc.</p>
+<p class="text-[10px] font-label-caps text-outline uppercase font-medium">12% Weight</p>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="sparkline bg-error/5 rounded">
+<svg class="w-full h-full" viewBox="0 0 100 40">
+<path d="M0 10 Q 30 30, 60 20 T 100 35" fill="none" stroke="#ba1a1a" stroke-width="2"></path>
+</svg>
+</div>
+<div class="text-right min-w-[60px]">
+<p class="font-body-md text-error font-semibold">-2.14%</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Gain/Loss & Big Graph Section -->
+<section class="glass-panel rounded-xl p-6 transition-all overflow-hidden relative hover:shadow-xl hover:border-primary/30 opacity-0 duration-1000 opacity-100">
+<div class="flex justify-between items-start mb-10 w-full relative z-10">
+<div>
+<h2 class="font-label-caps text-label-caps text-primary tracking-widest uppercase mb-1 font-semibold">Performance</h2>
+<p class="text-sm text-outline font-medium">Year-to-date trajectory</p>
+</div>
+<div class="flex flex-col items-end flex-shrink-0">
+<span class="font-label-caps text-[10px] text-outline uppercase font-medium mb-1">Total Gain</span>
+<span class="font-headline-lg text-headline-lg text-success-vibrant font-semibold drop-shadow-sm">+$12,402.10</span>
+</div>
+</div>
+<!-- Big Performance Graph -->
+<div class="relative h-[240px] w-full mt-4 flex items-end overflow-hidden group">
+<div class="absolute inset-0 opacity-20 transform translate-y-4 rounded-t-[40px] bg-white/50"></div>
+<svg class="w-full h-full relative z-10 overflow-visible" preserveAspectRatio="none">
+<defs>
+<linearGradient id="lineGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" style="stop-color:#605b77;stop-opacity:1"></stop>
+<stop offset="50%" style="stop-color:#705765;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#3e6373;stop-opacity:1"></stop>
+</linearGradient>
+<filter id="glow">
+<feGaussianBlur result="coloredBlur" stdDeviation="2.5"></feGaussianBlur>
+<feMerge>
+<feMergeNode in="coloredBlur"></feMergeNode>
+<feMergeNode in="SourceGraphic"></feMergeNode>
+</feMerge>
+</filter>
+</defs>
+<path class="drop-shadow-lg" d="M0 220 C 100 200, 150 240, 300 120 S 500 160, 600 60 S 800 100, 1000 20" fill="none" filter="url(#glow)" stroke="url(#lineGradient)" stroke-width="3"></path>
+</svg>
+<div class="absolute left-3/4 bottom-[180px] z-20 group-hover:scale-110 transition-transform cursor-pointer">
+<div class="w-3 h-3 rounded-full bg-white border-2 border-primary shadow-[0_0_15px_rgba(96,91,119,0.5)]"></div>
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 glass-panel !bg-white/90 p-2 rounded-lg text-[10px] font-label-caps whitespace-nowrap shadow-xl border-primary/20 font-bold opacity-0 transition-all duration-1000 opacity-100">
+                        OCT 24: $141,200
+                    </div>
+</div>
+</div>
+<div class="flex justify-between mt-4 px-2">
+<span class="font-label-caps text-[9px] text-outline opacity-70 font-bold">JAN</span>
+<span class="font-label-caps text-[9px] text-outline opacity-70 font-bold">MAR</span>
+<span class="font-label-caps text-[9px] text-outline opacity-70 font-bold">JUN</span>
+<span class="font-label-caps text-[9px] text-outline opacity-70 font-bold">SEP</span>
+<span class="font-label-caps text-[9px] text-primary font-bold">DEC</span>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar Shell -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-[72px] px-4 pb-safe bg-white/40 backdrop-blur-2xl border-t border-white/20 shadow-[0_-8px_30px_rgb(0,0,0,0.08)] z-50">
+<a class="flex flex-col items-center justify-center text-primary relative hover:opacity-100 transition-opacity active:translate-y-[-2px] duration-300" href="../portfolio_dashboard_ethereal_animated_balance_standardized_nav/screen.html">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: &quot;FILL&quot; 1;">grid_view</span>
+<span class="font-label-caps text-label-caps font-bold">Portfolio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline opacity-70 hover:opacity-100 transition-opacity active:translate-y-[-2px] duration-300" href="../advisor_inbox_standardized_no_indicator/screen.html">
+<span class="material-symbols-outlined mb-1">mail</span>
+<span class="font-label-caps text-label-caps font-bold">Inbox</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline opacity-70 hover:opacity-100 transition-opacity active:translate-y-[-2px] duration-300" href="../research_trending_analysis_tabs/screen.html">
+<span class="material-symbols-outlined mb-1">analytics</span>
+<span class="font-label-caps text-label-caps font-bold">Research</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline opacity-70 hover:opacity-100 transition-opacity active:translate-y-[-2px] duration-300" href="../advisor_chat_standardized_no_indicator/screen.html">
+<span class="material-symbols-outlined mb-1">chat</span>
+<span class="font-label-caps text-label-caps font-bold">Chat</span>
+</a>
+</nav>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const panels = document.querySelectorAll('.glass-panel');
+        const observerOptions = { threshold: 0.1 };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100');
+                    entry.target.classList.remove('translate-y-4');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        panels.forEach(panel => {
+            panel.classList.add('opacity-0', 'translate-y-4', 'transition-all', 'duration-1000');
+            observer.observe(panel);
+        });
+    });
+</script>
+
+
+</body></html>
