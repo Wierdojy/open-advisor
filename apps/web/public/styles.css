@@ -455,86 +455,6 @@ textarea { min-height: 108px; resize: vertical; }
 .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .chip-row.compact { margin: 0; }
 
-.segmented-control {
-  display: inline-grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255,255,255,0.72);
-}
-
-.segment {
-  min-height: 34px;
-  padding: 8px 14px;
-  border: 0;
-  border-radius: 999px;
-  color: var(--outline);
-  background: transparent;
-  font-family: "Geist", sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.segment.active {
-  color: #fff;
-  background: linear-gradient(135deg, var(--primary), #7c76a0);
-  box-shadow: 0 10px 24px rgba(96, 91, 119, 0.18);
-}
-
-.research-mode-panel {
-  padding: 14px 16px;
-}
-
-.research-toolbar {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.research-chart-card {
-  margin-bottom: 16px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: rgba(255,255,255,0.6);
-}
-
-.research-hero-chart {
-  width: 100%;
-  height: 220px;
-  margin: 10px 0 14px;
-}
-
-.legend-row {
-  gap: 6px;
-}
-
-.legend-chip-0 { border-color: rgba(96, 91, 119, 0.35); color: #605b77; }
-.legend-chip-1 { border-color: rgba(78, 160, 195, 0.35); color: #4ea0c3; }
-.legend-chip-2 { border-color: rgba(212, 136, 181, 0.35); color: #b96694; }
-
-.trend-grid,
-.research-compare-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.trend-module,
-.compare-card,
-.inbox-alert-card {
-  padding: 16px;
-}
-
-.trend-module .bullet-row,
-.compare-card .detail-copy {
-  margin-top: 10px;
-}
-
 .trend-pill.positive, .stock-up .trend-pill { color: var(--positive); background: var(--positive-soft); border-color: rgba(27, 143, 77, 0.22); }
 .trend-pill.negative, .stock-down .trend-pill { color: var(--negative); background: var(--negative-soft); border-color: rgba(198, 59, 59, 0.22); }
 .priority-critical { color: var(--error); border-color: rgba(186, 26, 26, 0.28); background: rgba(255, 218, 214, 0.36); }
@@ -880,6 +800,197 @@ textarea { min-height: 108px; resize: vertical; }
 .research-result-card .value { margin: 6px 0 8px; }
 .rich-copy svg { margin-top: 6px; }
 .empty-state { padding: 16px; color: var(--muted); }
+
+.stitch-research-scene {
+  padding: 0 20px 28px;
+}
+
+.stitch-research-scene .view-atmosphere {
+  inset: 18px 0 140px;
+  opacity: 0.9;
+}
+
+.stitch-research-hero {
+  position: relative;
+  z-index: 1;
+  padding: 88px 0 24px;
+  text-align: center;
+}
+
+.stitch-research-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 40px;
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.stitch-research-subtitle {
+  margin-top: 14px;
+  color: var(--outline);
+  font-family: "Geist", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.stitch-research-search-shell,
+.stitch-research-tabs,
+.stitch-research-list {
+  position: relative;
+  z-index: 1;
+}
+
+.stitch-research-search {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 14px;
+  min-height: 78px;
+  padding: 0 20px;
+  border: 1px solid rgba(121, 118, 125, 0.16);
+  border-radius: 20px;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 14px 34px rgba(111, 106, 132, 0.08);
+}
+
+.stitch-research-search .material-symbols-outlined,
+.stitch-research-mic {
+  color: var(--outline);
+}
+
+.stitch-research-input {
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font-size: 17px;
+}
+
+.stitch-research-input::placeholder {
+  color: #a8a8b2;
+}
+
+.stitch-research-mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.stitch-research-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 38px;
+  margin-top: 30px;
+  margin-bottom: 26px;
+}
+
+.stitch-research-tab {
+  position: relative;
+  padding: 0 0 12px;
+  border: 0;
+  color: var(--outline);
+  background: transparent;
+  font-family: "Geist", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.stitch-research-tab--active::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(96, 91, 119, 0.84);
+}
+
+.stitch-research-list {
+  display: grid;
+  gap: 14px;
+}
+
+.stitch-asset-card {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(121, 118, 125, 0.12);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.82);
+  box-shadow: 0 10px 28px rgba(111, 106, 132, 0.06);
+}
+
+.stitch-asset-card__icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(242,243,247,0.84));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 18px rgba(111, 106, 132, 0.08);
+}
+
+.stitch-asset-card__icon--1 { background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(244, 239, 230, 0.92)); }
+.stitch-asset-card__icon--2 { background: linear-gradient(180deg, rgba(245,250,246,0.96), rgba(233, 244, 237, 0.92)); }
+
+.stitch-asset-card__glyph {
+  color: var(--primary);
+  font-family: "Manrope", sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.stitch-asset-card__symbol {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stitch-asset-card__name {
+  margin-top: 8px;
+  color: var(--outline);
+  font-family: "Geist", sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.stitch-asset-card__price {
+  text-align: right;
+}
+
+.stitch-asset-card__value {
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1.1;
+}
+
+.stitch-asset-card__change {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stitch-asset-card__change.positive { color: #18a165; }
+.stitch-asset-card__change.negative { color: #d04545; }
 
 @keyframes orbitSpin {
   from { transform: translateZ(0) rotate(0deg); }
