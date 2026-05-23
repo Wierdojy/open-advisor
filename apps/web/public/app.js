@@ -7,7 +7,7 @@ const viewMeta = {
   dashboard: { label: 'Dashboard', icon: 'dashboard', accent: 'violet', kicker: 'Portfolio atelier' },
   inbox: { label: 'Inbox', icon: 'inbox', accent: 'cyan', kicker: 'Signal curation' },
   research: { label: 'Research', icon: 'query_stats', accent: 'amber', kicker: 'Context and discovery' },
-  chat: { label: 'Chat', icon: 'forum', accent: 'rose', kicker: 'Advisor dialogue' }
+  chat: { label: 'Strategize', icon: 'forum', accent: 'rose', kicker: 'Beliefs and dialogue' }
 };
 const views = Object.keys(viewMeta);
 
@@ -145,6 +145,9 @@ function loadUiState() {
     },
     inboxTag: base.inboxTag || 'all',
     researchQuery: base.researchQuery || '',
+    researchMode: base.researchMode || 'explore',
+    researchRange: base.researchRange || '6M',
+    strategizeMode: base.strategizeMode || 'conversations',
     chat: {
       threads,
       activeThreadId: base.chat?.activeThreadId || threads[0].id,
@@ -624,6 +627,101 @@ function getResearchResults(query) {
   return { asset: fallback, performance, bullets, results };
 }
 
+function chartSeriesForAsset(asset, index = 0, range = '6M') {
+  const performance = performanceForAsset(asset, index);
+  const lengthByRange = { '1M': 8, '3M': 10, '6M': 12, '1Y': 14, MAX: 16 };
+  const labelsByRange = {
+    '1M': ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'Now'],
+    '3M': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Now'],
+    '6M': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Now'],
+    '1Y': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Q1', 'Now'],
+    MAX: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', 'Now']
+  };
+  const length = lengthByRange[range] || 12;
+  const labels = labelsByRange[range] || labelsByRange['6M'];
+  return {
+    asset,
+    performance,
+    points: performance.points.slice(0, length),
+    labels: labels.slice(0, length)
+  };
+}
+
+function multiLineChartSvg(seriesSet) {
+  const colors = ['#605b77', '#4ea0c3', '#d488b5', '#7d88b1'];
+  const width = 320;
+  const height = 180;
+  const maxPoints = Math.max(...seriesSet.map((series) => series.points.length));
+  const lines = seriesSet.map((series, index) => {
+    const coords = series.points.map((point, pointIndex) => {
+      const x = (pointIndex / Math.max(1, maxPoints - 1)) * width;
+      const y = height - ((point / 100) * height);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return `<polyline points="${coords}" fill="none" stroke="${colors[index % colors.length]}" stroke-width="${index === 0 ? 3.5 : 2.4}" stroke-linecap="round" stroke-linejoin="round"></polyline>`;
+  }).join('');
+  const guides = Array.from({ length: 4 }, (_, index) => {
+    const y = 24 + (index * 40);
+    return `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="rgba(121,118,125,0.12)" stroke-width="1"></line>`;
+  }).join('');
+  return `
+    <svg class="research-hero-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+      ${guides}
+      ${lines}
+    </svg>
+  `;
+}
+
+function getResearchCompareAssets(primaryAsset) {
+  const owned = getDashboardData().holdings.map((item) => item.asset);
+  const relatedTheme = (state.themes || []).find((theme) => (theme.assetIds || []).includes(primaryAsset?.id));
+  const themeAssets = relatedTheme ? (relatedTheme.assetIds || []).map(assetById).filter(Boolean) : [];
+  return unique([primaryAsset, ...themeAssets, ...owned].filter(Boolean)).filter((asset) => asset.id !== primaryAsset?.id).slice(0, 3);
+}
+
+function getTrendingResearchData() {
+  const { holdings, watchlistAssets } = getDashboardData();
+  const pool = [...holdings, ...watchlistAssets].map(({ asset, performance }) => ({
+    asset,
+    performance,
+    sector: ((state.themes || []).find((theme) => (theme.assetIds || []).includes(asset.id))?.title) || (asset.assetType === 'crypto' ? 'Digital assets' : 'General coverage')
+  }));
+
+  const trendingAssets = [...pool].sort((a, b) => Math.abs(b.performance.change) - Math.abs(a.performance.change)).slice(0, 5);
+  const unusualMovers = [...pool].filter((item) => Math.abs(item.performance.change) >= 3).slice(0, 4);
+  const themeMomentum = (state.themes || []).map((theme) => {
+    const performances = (theme.assetIds || []).map((id, index) => performanceForAsset(assetById(id), index + 30));
+    const score = performances.length ? performances.reduce((sum, item) => sum + item.change, 0) / performances.length : 0;
+    return {
+      theme,
+      score: Number(score.toFixed(1)),
+      stance: score >= 2 ? 'Accelerating' : score <= -1.5 ? 'Fading' : 'Holding'
+    };
+  }).sort((a, b) => b.score - a.score).slice(0, 4);
+
+  const watchlistMomentum = (state.watchlists || []).map((watchlist) => {
+    const performances = (watchlist.itemAssetIds || []).map((id, index) => performanceForAsset(assetById(id), index + 50));
+    const score = performances.length ? performances.reduce((sum, item) => sum + item.change, 0) / performances.length : 0;
+    return {
+      watchlist,
+      score: Number(score.toFixed(1)),
+      movers: (watchlist.itemAssetIds || []).slice(0, 3).map(assetById).filter(Boolean)
+    };
+  }).sort((a, b) => b.score - a.score).slice(0, 3);
+
+  const worthWatching = trendingAssets.slice(0, 3).map((item, index) => ({
+    asset: item.asset,
+    performance: item.performance,
+    note: [
+      'Momentum is building versus the rest of your tracked universe.',
+      'Price action is diverging enough to justify a deeper chart review.',
+      'A tracked theme may be starting to re-rate around this name.'
+    ][index % 3]
+  }));
+
+  return { trendingAssets, unusualMovers, themeMomentum, watchlistMomentum, worthWatching };
+}
+
 function getActiveThread() {
   return uiState.chat.threads.find((thread) => thread.id === uiState.chat.activeThreadId) || uiState.chat.threads[0];
 }
@@ -789,6 +887,8 @@ function renderInbox() {
   const tags = getIdentityTags();
   const filterTag = uiState.inboxTag;
   const items = state.inbox.filter((item) => item.state !== 'archived').filter((item) => filterTag === 'all' || tagsForInboxItem(item).includes(filterTag));
+  const alerts = items.filter((item) => ['critical', 'high'].includes(item.priority)).slice(0, 4);
+  const coverage = items.filter((item) => !alerts.includes(item));
 
   el('view-inbox').innerHTML = `
     <div class="tab-scene tab-scene--inbox">
@@ -796,15 +896,15 @@ function renderInbox() {
     ${renderViewHeader(
       'inbox',
       'Inbox',
-      'Identity-linked market coverage, organized around what you already own, track, and believe.'
+      'Signal triage first, curated market context second. Keep urgent prompts separate from what is simply worth reading.'
     )}
     <div class="view-grid tab-scene__content">
       <section class="panel">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Identity system</div>
-            <h2 class="panel-title">Beliefs and themes</h2>
-            <p class="panel-copy">These beliefs shape what gets surfaced and how incoming articles are labeled.</p>
+            <div class="panel-label">Action lane</div>
+            <h2 class="panel-title">Alerts and suggestions</h2>
+            <p class="panel-copy">High-signal prompts that deserve attention now, without flooding the reading flow.</p>
           </div>
         </div>
         <div class="chip-row">
@@ -812,38 +912,34 @@ function renderInbox() {
           ${tags.map((tag) => `<button class="chip ${filterTag === tag ? 'active' : ''}" data-inbox-tag="${tag}">${tag}</button>`).join('')}
         </div>
         <div class="list belief-list">
-          ${(state.themes || []).map((theme) => `
-            <article class="belief-card">
+          ${alerts.map((item) => {
+            const event = item.event || {};
+            return `
+            <article class="belief-card inbox-alert-card">
               <div class="list-row">
                 <div>
-                  <div class="list-title">${theme.title}</div>
-                  <div class="meta">${titleCase(theme.status)} belief</div>
+                  <div class="list-title">${event.title || 'Untitled signal'}</div>
+                  <div class="meta">${titleCase(item.priority)} · ${formatDate(item.createdAt)}</div>
                 </div>
-                <span class="badge">${(theme.assetIds || []).length} assets</span>
+                <span class="badge ${priorityClass(item.priority)}">${titleCase(item.priority)}</span>
               </div>
-              <div class="item-text">${theme.summary || theme.hypothesis || 'No summary yet.'}</div>
+              <div class="item-text">${item.reason || event.factualSummary || 'No summary yet.'}</div>
+              <div class="detail-copy">${item.nextStep || 'No next step attached yet.'}</div>
             </article>
-          `).join('') || '<div class="empty-state">No beliefs yet.</div>'}
+          `;
+          }).join('') || '<div class="empty-state">No high-signal prompts right now.</div>'}
         </div>
-        <form id="belief-form" class="form-grid">
-          <input class="field" name="title" placeholder="Belief or theme" required />
-          <textarea class="textarea" name="summary" placeholder="What do you believe and why?"></textarea>
-          <input class="field" name="symbols" placeholder="Linked symbols comma-separated" />
-          <div class="form-actions">
-            <button class="button" type="submit">Add belief</button>
-          </div>
-        </form>
       </section>
 
       <section class="panel">
         <div class="panel-header">
           <div>
             <div class="panel-label">Curated articles</div>
-            <h2 class="panel-title">Real-time article feed</h2>
+            <h2 class="panel-title">Coverage worth reading</h2>
           </div>
         </div>
         <div class="list">
-          ${items.map((item) => {
+          ${coverage.map((item) => {
             const event = item.event || {};
             const beliefTags = tagsForInboxItem(item);
             return `
@@ -868,7 +964,7 @@ function renderInbox() {
                 </div>
               </article>
             `;
-          }).join('') || '<div class="empty-state">No articles match this filter yet.</div>'}
+          }).join('') || '<div class="empty-state">No curated coverage matches this filter yet.</div>'}
         </div>
       </section>
     </div>
@@ -879,6 +975,14 @@ function renderInbox() {
 function renderResearch() {
   const query = uiState.researchQuery || '';
   const result = getResearchResults(query || (state.assets?.[0]?.symbol || ''));
+  const mode = uiState.researchMode || 'explore';
+  const range = uiState.researchRange || '6M';
+  const primaryAsset = result?.asset || state.assets?.[0] || null;
+  const compareAssets = primaryAsset ? getResearchCompareAssets(primaryAsset) : [];
+  const chartSeries = primaryAsset
+    ? [chartSeriesForAsset(primaryAsset, 0, range), ...compareAssets.slice(0, 2).map((asset, index) => chartSeriesForAsset(asset, index + 1, range))]
+    : [];
+  const trending = getTrendingResearchData();
 
   el('view-research').innerHTML = `
     <div class="tab-scene tab-scene--research">
@@ -886,14 +990,21 @@ function renderResearch() {
     ${renderViewHeader(
       'research',
       'Research',
-      'Search stocks, pull context, and inspect graphs without losing the thread of your portfolio or thesis work.'
+      'Two clear modes: Explore for deep chart work and Trending for fast market discovery without clutter.'
     )}
     <div class="view-grid tab-scene__content">
+      <section class="panel research-mode-panel">
+        <div class="segmented-control">
+          <button class="segment ${mode === 'explore' ? 'active' : ''}" data-research-mode="explore">Explore</button>
+          <button class="segment ${mode === 'trending' ? 'active' : ''}" data-research-mode="trending">Trending</button>
+        </div>
+      </section>
+
       <section class="form-card">
         <div class="panel-header">
           <div>
             <div class="panel-label">Search</div>
-            <h2 class="panel-title">Stock research</h2>
+            <h2 class="panel-title">Research workspace</h2>
           </div>
         </div>
         <form id="research-search-form" class="form-grid">
@@ -905,14 +1016,49 @@ function renderResearch() {
         </form>
       </section>
 
-      ${result ? `
+      ${mode === 'explore' && result ? `
         <section class="panel">
           <div class="panel-header">
             <div>
-              <div class="panel-label">Results</div>
+              <div class="panel-label">Explore</div>
               <h2 class="panel-title">${result.asset.symbol || result.asset.name}</h2>
             </div>
             <span class="trend-pill ${result.performance.positive ? 'positive' : 'negative'}">${result.performance.positive ? '+' : ''}${result.performance.change}%</span>
+          </div>
+          <div class="research-toolbar">
+            <div class="chip-row compact">
+              ${['1M', '3M', '6M', '1Y', 'MAX'].map((value) => `<button class="chip ${range === value ? 'active' : ''}" data-research-range="${value}">${value}</button>`).join('')}
+            </div>
+            <div class="chip-row compact">
+              <span class="chip static">Compare multiple assets</span>
+              <span class="chip static">Indicators</span>
+              <span class="chip static">Annotations</span>
+            </div>
+          </div>
+          <div class="research-chart-card">
+            <div class="list-row align-start">
+              <div>
+                <div class="panel-label">Chart hero</div>
+                <div class="list-title">Multi-asset view</div>
+              </div>
+              <div class="meta">${range} window</div>
+            </div>
+            ${multiLineChartSvg(chartSeries)}
+            <div class="chip-row compact legend-row">
+              ${chartSeries.map((series, index) => `<span class="chip static legend-chip legend-chip-${index}">${series.asset.symbol || series.asset.name}</span>`).join('')}
+            </div>
+          </div>
+          <div class="meta-grid three-up research-compare-grid">
+            ${[primaryAsset, ...compareAssets].filter(Boolean).slice(0, 4).map((asset, index) => {
+              const performance = performanceForAsset(asset, index + 20);
+              return `
+                <article class="meta-card research-result-card compare-card">
+                  <div class="panel-label">Compare</div>
+                  <div class="value">${asset.symbol || asset.name}</div>
+                  <div class="detail-copy">${asset.name || 'Tracked asset'} · ${performance.positive ? '+' : ''}${performance.change}%</div>
+                </article>
+              `;
+            }).join('')}
           </div>
           <div class="meta-grid three-up">
             ${result.results.map((entry) => `
@@ -929,8 +1075,65 @@ function renderResearch() {
               ${result.bullets.map((bullet) => `<div class="bullet-row">• ${bullet}</div>`).join('')}
             </div>
           </div>
+          <div class="detail-block">
+            <div class="panel-label">Deeper analysis</div>
+            <div class="list compact-list">
+              <div class="bullet-row">• Queue a deeper research run for this asset</div>
+              <div class="bullet-row">• Link the chart read to an active thesis</div>
+              <div class="bullet-row">• Turn a key price level into a follow-up reminder</div>
+            </div>
+          </div>
         </section>
       ` : '<div class="empty-state">No research results yet.</div>'}
+
+      ${mode === 'trending' ? `
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-label">Trending</div>
+              <h2 class="panel-title">Discovery and scanning</h2>
+            </div>
+          </div>
+          <div class="meta-grid two-up trend-grid">
+            <article class="meta-card trend-module">
+              <div class="panel-label">Trending assets</div>
+              <div class="list compact-list">
+                ${trending.trendingAssets.map((item) => `<div class="bullet-row"><strong>${item.asset.symbol || item.asset.name}</strong> · ${item.performance.positive ? '+' : ''}${item.performance.change}%</div>`).join('')}
+              </div>
+            </article>
+            <article class="meta-card trend-module">
+              <div class="panel-label">Unusual movers</div>
+              <div class="list compact-list">
+                ${trending.unusualMovers.map((item) => `<div class="bullet-row"><strong>${item.asset.symbol || item.asset.name}</strong> · move stretched to ${item.performance.positive ? '+' : ''}${item.performance.change}%</div>`).join('') || '<div class="meta">No unusual movers right now.</div>'}
+              </div>
+            </article>
+            <article class="meta-card trend-module">
+              <div class="panel-label">Theme momentum</div>
+              <div class="list compact-list">
+                ${trending.themeMomentum.map((item) => `<div class="bullet-row"><strong>${item.theme.title}</strong> · ${item.stance} (${item.score > 0 ? '+' : ''}${item.score})</div>`).join('')}
+              </div>
+            </article>
+            <article class="meta-card trend-module">
+              <div class="panel-label">Watchlist momentum</div>
+              <div class="list compact-list">
+                ${trending.watchlistMomentum.map((item) => `<div class="bullet-row"><strong>${item.watchlist.name}</strong> · ${item.score > 0 ? '+' : ''}${item.score} · ${item.movers.map((asset) => asset.symbol || asset.name).join(', ')}</div>`).join('') || '<div class="meta">No watchlists are active yet.</div>'}
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-label">Worth watching</div>
+              <h2 class="panel-title">Names to investigate next</h2>
+            </div>
+          </div>
+          <div class="list stock-list">
+            ${trending.worthWatching.map(({ asset, performance, note }) => stockCardMarkup(asset, performance, 'Worth watching', `<span class="meta">${note}</span>`)).join('')}
+          </div>
+        </section>
+      ` : ''}
 
       <section class="panel">
         <div class="panel-header">
@@ -962,16 +1165,25 @@ function renderResearch() {
 function renderChat() {
   const activeThread = getActiveThread();
   const identityTags = getIdentityTags();
+  const mode = uiState.strategizeMode || 'conversations';
 
   el('view-chat').innerHTML = `
     <div class="chat-view tab-scene tab-scene--chat ${uiState.chat.isTyping ? 'typing' : ''}">
       ${renderViewAtmosphere('chat', 72)}
       ${renderViewHeader(
         'chat',
-        'Chat',
-        'Separate portfolio questions, thesis work, and follow-ups into focused conversations with the advisor.'
+        'Strategize',
+        'Keep beliefs and philosophy in one lane, and advisor conversations in another, without mixing the two.'
       )}
       <div class="view-grid chat-scene__content">
+      <section class="panel research-mode-panel">
+        <div class="segmented-control">
+          <button class="segment ${mode === 'conversations' ? 'active' : ''}" data-strategize-mode="conversations">Conversations</button>
+          <button class="segment ${mode === 'beliefs' ? 'active' : ''}" data-strategize-mode="beliefs">Beliefs</button>
+        </div>
+      </section>
+
+      ${mode === 'conversations' ? `
       <section class="panel">
         <div class="panel-header">
           <div>
@@ -1016,6 +1228,67 @@ function renderChat() {
           </div>
         </form>
       </section>
+      ` : `
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-label">Beliefs</div>
+            <h2 class="panel-title">Philosophy and theses</h2>
+            <p class="panel-copy">Organize the ideas that should shape how Open Advisor interprets signals and conversations.</p>
+          </div>
+        </div>
+        <div class="list belief-list">
+          ${(state.themes || []).map((theme) => `
+            <article class="belief-card">
+              <div class="list-row">
+                <div>
+                  <div class="list-title">${theme.title}</div>
+                  <div class="meta">${titleCase(theme.status)} belief</div>
+                </div>
+                <span class="badge">${(theme.assetIds || []).length} assets</span>
+              </div>
+              <div class="item-text">${theme.summary || theme.hypothesis || 'No summary yet.'}</div>
+              <div class="detail-copy">${theme.monitoringPlan || 'No monitoring plan recorded yet.'}</div>
+            </article>
+          `).join('') || '<div class="empty-state">No beliefs yet.</div>'}
+        </div>
+        <form id="belief-form" class="form-grid">
+          <input class="field" name="title" placeholder="Belief or philosophy" required />
+          <textarea class="textarea" name="summary" placeholder="What do you believe and why does it matter?"></textarea>
+          <input class="field" name="symbols" placeholder="Linked symbols comma-separated" />
+          <div class="form-actions">
+            <button class="button" type="submit">Add belief</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-label">Principles</div>
+            <h2 class="panel-title">How the advisor should think</h2>
+          </div>
+        </div>
+        <div class="meta-grid two-up trend-grid">
+          <article class="meta-card trend-module">
+            <div class="panel-label">Signal weighting</div>
+            <div class="detail-copy">Prioritize evidence that confirms or breaks an active thesis over generic market noise.</div>
+          </article>
+          <article class="meta-card trend-module">
+            <div class="panel-label">Research posture</div>
+            <div class="detail-copy">Use charts and catalysts to deepen conviction before turning an idea into action.</div>
+          </article>
+          <article class="meta-card trend-module">
+            <div class="panel-label">Risk discipline</div>
+            <div class="detail-copy">Keep concentration, regime change, and benchmark drift visible in every strategic conversation.</div>
+          </article>
+          <article class="meta-card trend-module">
+            <div class="panel-label">Review cadence</div>
+            <div class="detail-copy">Revisit beliefs when catalysts land, momentum breaks, or the market narrative materially changes.</div>
+          </article>
+        </div>
+      </section>
+      `}
       </div>
     </div>
   `;
@@ -1133,6 +1406,30 @@ function bindActions() {
   document.querySelectorAll('[data-inbox-tag]').forEach((button) => {
     button.onclick = () => {
       uiState.inboxTag = button.dataset.inboxTag;
+      saveUiState();
+      renderAll();
+    };
+  });
+
+  document.querySelectorAll('[data-research-mode]').forEach((button) => {
+    button.onclick = () => {
+      uiState.researchMode = button.dataset.researchMode;
+      saveUiState();
+      renderAll();
+    };
+  });
+
+  document.querySelectorAll('[data-research-range]').forEach((button) => {
+    button.onclick = () => {
+      uiState.researchRange = button.dataset.researchRange;
+      saveUiState();
+      renderAll();
+    };
+  });
+
+  document.querySelectorAll('[data-strategize-mode]').forEach((button) => {
+    button.onclick = () => {
+      uiState.strategizeMode = button.dataset.strategizeMode;
       saveUiState();
       renderAll();
     };
