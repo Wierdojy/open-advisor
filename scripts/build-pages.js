@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { defaultState, derive } = require('../packages/domain');
+const defaultState = require('../packages/domain/src/default-state');
+const derive = require('../packages/domain/src/derive');
 
 const root = path.join(__dirname, '..');
 const publicDir = path.join(root, 'apps', 'web', 'public');
