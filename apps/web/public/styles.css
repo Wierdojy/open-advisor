@@ -172,6 +172,7 @@ textarea { min-height: 108px; resize: vertical; }
   text-transform: uppercase;
 }
 .meta { letter-spacing: 0.08em; }
+.value-small { font-size: 14px; line-height: 1.3; }
 
 .panel, .form-card, .detail-block, .list-item, .empty-state, .meta-card, .belief-card, .stock-card, .thread-card, .modal-card, .chat-bubble {
   position: relative;
@@ -394,6 +395,81 @@ textarea { min-height: 108px; resize: vertical; }
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
+}
+.signal-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.signal-kpi,
+.suggestion-card,
+.report-card,
+.report-row {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.64);
+  backdrop-filter: blur(14px) saturate(1.04);
+}
+
+.signal-kpi {
+  padding: 14px;
+  min-height: 96px;
+  display: grid;
+  align-content: space-between;
+}
+
+.signal-kpi .value {
+  font-size: 24px;
+  font-weight: 300;
+}
+
+.suggestion-card,
+.report-card,
+.report-row {
+  padding: 16px;
+}
+
+.section-stack {
+  display: grid;
+  gap: 18px;
+  margin-top: 14px;
+}
+
+.report-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.report-row--news {
+  display: block;
+}
+
+.report-metric {
+  font-family: "Geist", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.report-metric.positive { color: var(--positive); }
+.report-metric.negative { color: var(--negative); }
+
+.stacked-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.news-basket .item-text {
+  margin-top: 8px;
 }
 .meta-card {
   padding: 12px;
@@ -1032,6 +1108,8 @@ textarea { min-height: 108px; resize: vertical; }
 
 @media (max-width: 360px) {
   .two-up { grid-template-columns: 1fr; }
+
+  .signal-kpi-grid { grid-template-columns: 1fr; }
 
   .stitch-page-title {
     grid-template-columns: 1fr;

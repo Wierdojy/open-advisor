@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { store, derive } = require('../packages/domain');
+const { defaultState, derive } = require('../packages/domain');
 
 const root = path.join(__dirname, '..');
 const publicDir = path.join(root, 'apps', 'web', 'public');
@@ -23,7 +23,7 @@ const pagesIndex = rawIndex
   .replace('<script src="./app.js"></script>', `<script>window.OPEN_ADVISOR_BUILD = "${buildVersion}";</script>\n    <script src="./app.js?v=${buildVersion}"></script>`);
 fs.writeFileSync(path.join(pagesDir, 'index.html'), pagesIndex);
 
-const bootstrap = derive.buildBootstrap(store.loadState());
+const bootstrap = derive.buildBootstrap(defaultState);
 fs.writeFileSync(path.join(pagesDir, 'demo-bootstrap.json'), JSON.stringify(bootstrap, null, 2));
 fs.writeFileSync(path.join(pagesDir, '.nojekyll'), '');
 

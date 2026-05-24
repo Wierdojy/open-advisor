@@ -51,6 +51,11 @@ function formatCurrency(value) {
   }).format(Number(value || 0));
 }
 
+function formatPercent(value) {
+  const amount = Number(value || 0);
+  return `${amount > 0 ? '+' : ''}${amount.toFixed(1)}%`;
+}
+
 function makeId(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -291,6 +296,125 @@ function buildPortfolioSummary(baseState) {
   };
 }
 
+function buildBeliefProfiles(baseState) {
+  const configured = baseState.user?.researchPolicy?.inboxBeliefs;
+  const themeMap = getMap(baseState.themes || []);
+  if (Array.isArray(configured) && configured.length) {
+    return configured.map((profile) => ({
+      ...profile,
+      theme: profile.themeId ? themeMap.get(profile.themeId) || null : null
+    }));
+  }
+  return (baseState.themes || []).map((theme) => ({
+    id: `belief_${theme.id}`,
+    themeId: theme.id,
+    theme,
+    stance: 'balanced',
+    conviction: 'medium',
+    timeHorizon: '3-12 months',
+    actionBias: 'monitor',
+    disconfirmSignals: ''
+  }));
+}
+
+function classifyBeliefAlignment(item, profile) {
+  if (!profile) return 'neutral';
+  const text = `${item.event?.title || ''} ${item.event?.factualSummary || ''}`.toLowerCase();
+  const change = Number(item.event?.marketContext?.changePercent || 0);
+  const positive = change > 0 || /beat|raised|upward|surge|jump|rally|growth/.test(text);
+  const negative = change < 0 || /miss|cut|drop|falls|slump|risk/.test(text);
+  if (profile.stance === 'bullish') return negative ? 'challenging' : positive ? 'reinforcing' : 'neutral';
+  if (profile.stance === 'bearish') return positive ? 'challenging' : negative ? 'reinforcing' : 'neutral';
+  return 'neutral';
+}
+
+function buildAiSuggestions(baseState) {
+  const inbox = buildInbox(baseState).filter((item) => item.state !== 'archived').slice(0, 6);
+  const beliefProfiles = buildBeliefProfiles(baseState);
+  return inbox.map((item) => {
+    const profile = beliefProfiles.find((entry) => entry.themeId === item.event?.themeId)
+      || beliefProfiles.find((entry) => entry.theme?.assetIds?.includes(item.event?.assetId));
+    const alignment = classifyBeliefAlignment(item, profile);
+    const assetLabel = item.event?.asset?.symbol || item.event?.asset?.name || 'This asset';
+    let label = 'Monitor';
+    let summary = `${assetLabel} should stay on the board, but it does not yet require a larger action.`;
+    let action = 'Let it roll into the daily report unless another signal confirms the move.';
+    if (item.priority === 'critical' && alignment === 'challenging') {
+      label = 'Stress-test thesis';
+      summary = `${assetLabel} is moving against one of your strongest beliefs.`;
+      action = 'Queue deeper research and revisit sizing assumptions.';
+    } else if ((item.priority === 'critical' || item.priority === 'high') && alignment === 'reinforcing') {
+      label = 'Confirm thesis';
+      summary = `${assetLabel} is reinforcing a tracked belief and deserves verification, not just excitement.`;
+      action = 'Save it to the daily report and watch for second-source confirmation.';
+    } else if (item.priority === 'high') {
+      label = 'Position check';
+      summary = `${assetLabel} intersects with a held or watched name and merits a manual check.`;
+      action = 'Review catalyst context and decide whether to set a reminder.';
+    }
+    return {
+      id: `suggestion_${item.id}`,
+      inboxItemId: item.id,
+      eventId: item.eventId,
+      asset: item.event?.asset || null,
+      theme: item.event?.theme || profile?.theme || null,
+      priority: item.priority,
+      alignment,
+      label,
+      summary,
+      action
+    };
+  });
+}
+
+function buildDailyReport(baseState) {
+  const trackedAssetIds = unique([
+    ...(baseState.holdings || []).map((holding) => holding.assetId),
+    ...(baseState.watchlists || []).flatMap((watchlist) => watchlist.itemAssetIds || [])
+  ]);
+  const trendingStocks = trackedAssetIds
+    .map((assetId, index) => {
+      const asset = (baseState.assets || []).find((entry) => entry.id === assetId);
+      if (!asset) return null;
+      const performance = performanceForAsset(asset, index + 1);
+      const relatedThemes = (baseState.themes || []).filter((theme) => (theme.assetIds || []).includes(asset.id));
+      const recentEvent = (baseState.canonicalEvents || []).find((event) => event.assetId === asset.id);
+      return {
+        assetId: asset.id,
+        symbol: asset.symbol,
+        name: asset.name,
+        price: performance.price,
+        changePct1d: performance.change,
+        linkedBeliefs: relatedThemes.map((theme) => theme.title),
+        rationale: recentEvent?.title || `${asset.symbol || asset.name} is one of the bigger modeled movers in your tracked graph.`
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => Math.abs(b.changePct1d) - Math.abs(a.changePct1d))
+    .slice(0, 5);
+
+  const newsBasket = buildInbox(baseState)
+    .filter((item) => item.state !== 'archived')
+    .slice(0, 5)
+    .map((item) => ({
+      id: item.id,
+      title: item.event?.title || 'Untitled update',
+      summary: item.event?.factualSummary || item.reason || '',
+      aiAngle: item.event?.enrichment?.summary || item.nextStep || '',
+      source: item.event?.sourceLabel || 'Open Advisor',
+      publishedAt: item.event?.recordedAt || item.createdAt || null
+    }));
+
+  return {
+    title: 'Daily market brief',
+    generatedAt: nowIso(),
+    cadence: baseState.user?.researchPolicy?.dailyReportSchedule || '08:00 local time',
+    summary: `${trendingStocks.length} trending names and ${newsBasket.length} curated articles ready for review.`,
+    trendingStocks,
+    newsBasket
+  };
+}
+
 function deriveClientState(baseState) {
   const next = clone(baseState);
   next.theses = next.themes;
@@ -300,6 +424,9 @@ function deriveClientState(baseState) {
   next.portfolioSummary = buildPortfolioSummary(next);
   next.inbox = buildInbox(next);
   next.researchWorkspace = buildResearchWorkspace(next);
+  next.beliefProfiles = buildBeliefProfiles(next);
+  next.aiSuggestions = buildAiSuggestions(next);
+  next.dailyReport = buildDailyReport(next);
   return next;
 }
 
@@ -431,6 +558,34 @@ async function demoMutate(path, body = {}, method = 'POST') {
       if (!theme.assetIds.includes(asset.id)) theme.assetIds.push(asset.id);
     }
     rawState.themes.push(theme);
+  } else if (path === '/v1/inbox-beliefs' && method === 'POST') {
+    const theme = {
+      id: makeId('theme'),
+      title: body.title || 'Untitled Theme',
+      status: body.status || 'active',
+      summary: body.summary || '',
+      hypothesis: body.hypothesis || body.summary || '',
+      monitoringPlan: body.monitoringPlan || body.disconfirmSignals || '',
+      assetIds: []
+    };
+    for (const item of body.assets || []) {
+      const asset = ensureDemoAsset(rawState, item);
+      if (!theme.assetIds.includes(asset.id)) theme.assetIds.push(asset.id);
+    }
+    rawState.themes.push(theme);
+    rawState.user = rawState.user || { id: makeId('user'), name: 'Open Advisor', timezone: 'UTC', digestCadence: 'daily', researchPolicy: {} };
+    rawState.user.researchPolicy = rawState.user.researchPolicy || {};
+    rawState.user.researchPolicy.inboxBeliefs = rawState.user.researchPolicy.inboxBeliefs || [];
+    rawState.user.researchPolicy.inboxBeliefs.unshift({
+      id: makeId('belief_profile'),
+      themeId: theme.id,
+      stance: body.stance || 'balanced',
+      conviction: body.conviction || 'medium',
+      timeHorizon: body.timeHorizon || '3-12 months',
+      actionBias: body.actionBias || 'monitor',
+      preferredEvidence: body.preferredEvidence || [],
+      disconfirmSignals: body.disconfirmSignals || ''
+    });
   } else if ((path === '/v1/research-jobs' || path === '/v1/research-runs') && method === 'POST') {
     createDemoResearch(rawState, body);
   } else if (path === '/v1/notes' && method === 'POST') {
@@ -573,6 +728,10 @@ function getDashboardData() {
 
 function getIdentityTags() {
   return unique((state.themes || []).map((theme) => theme.title));
+}
+
+function getBeliefProfiles() {
+  return state.beliefProfiles || [];
 }
 
 function tagsForInboxItem(item) {
@@ -787,8 +946,11 @@ function renderDashboard() {
 
 function renderInbox() {
   const tags = getIdentityTags();
+  const beliefProfiles = getBeliefProfiles();
   const filterTag = uiState.inboxTag;
   const items = state.inbox.filter((item) => item.state !== 'archived').filter((item) => filterTag === 'all' || tagsForInboxItem(item).includes(filterTag));
+  const suggestions = (state.aiSuggestions || []).slice(0, 4);
+  const dailyReport = state.dailyReport || { trendingStocks: [], newsBasket: [] };
 
   el('view-inbox').innerHTML = `
     <div class="tab-scene tab-scene--inbox">
@@ -802,26 +964,41 @@ function renderInbox() {
       <section class="panel">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Identity system</div>
-            <h2 class="panel-title">Beliefs and themes</h2>
-            <p class="panel-copy">These beliefs shape what gets surfaced and how incoming articles are labeled.</p>
+            <div class="panel-label">Belief engine</div>
+            <h2 class="panel-title">User-guided curation</h2>
+            <p class="panel-copy">AI ranks alerts through explicit beliefs, conviction, time horizon, and disconfirming evidence.</p>
           </div>
+        </div>
+        <div class="signal-kpi-grid">
+          <article class="signal-kpi">
+            <div class="meta">Unread signals</div>
+            <div class="value">${items.filter((item) => item.state === 'new').length}</div>
+          </article>
+          <article class="signal-kpi">
+            <div class="meta">High-priority suggestions</div>
+            <div class="value">${suggestions.filter((item) => item.priority === 'critical' || item.priority === 'high').length}</div>
+          </article>
+          <article class="signal-kpi">
+            <div class="meta">Daily report</div>
+            <div class="value value-small">${dailyReport.cadence || 'Daily'}</div>
+          </article>
         </div>
         <div class="chip-row">
           <button class="chip ${filterTag === 'all' ? 'active' : ''}" data-inbox-tag="all">All</button>
           ${tags.map((tag) => `<button class="chip ${filterTag === tag ? 'active' : ''}" data-inbox-tag="${tag}">${tag}</button>`).join('')}
         </div>
         <div class="list belief-list">
-          ${(state.themes || []).map((theme) => `
+          ${beliefProfiles.map((profile) => `
             <article class="belief-card">
               <div class="list-row">
                 <div>
-                  <div class="list-title">${theme.title}</div>
-                  <div class="meta">${titleCase(theme.status)} belief</div>
+                  <div class="list-title">${profile.theme?.title || 'Untitled belief'}</div>
+                  <div class="meta">${titleCase(profile.stance)} · ${titleCase(profile.conviction)} conviction</div>
                 </div>
-                <span class="badge">${(theme.assetIds || []).length} assets</span>
+                <span class="badge">${profile.timeHorizon}</span>
               </div>
-              <div class="item-text">${theme.summary || theme.hypothesis || 'No summary yet.'}</div>
+              <div class="item-text">${profile.theme?.summary || profile.theme?.hypothesis || 'No summary yet.'}</div>
+              <div class="detail-copy">Disconfirm if: ${profile.disconfirmSignals || 'No disconfirming rule written yet.'}</div>
             </article>
           `).join('') || '<div class="empty-state">No beliefs yet.</div>'}
         </div>
@@ -829,8 +1006,23 @@ function renderInbox() {
           <input class="field" name="title" placeholder="Belief or theme" required />
           <textarea class="textarea" name="summary" placeholder="What do you believe and why?"></textarea>
           <input class="field" name="symbols" placeholder="Linked symbols comma-separated" />
+          <div class="two-up form-grid">
+            <select class="select" name="stance">
+              <option value="bullish">Bullish</option>
+              <option value="balanced">Balanced</option>
+              <option value="bearish">Bearish</option>
+            </select>
+            <select class="select" name="conviction">
+              <option value="high">High conviction</option>
+              <option value="medium">Medium conviction</option>
+              <option value="low">Low conviction</option>
+            </select>
+            <input class="field" name="timeHorizon" placeholder="Time horizon (e.g. 3-12 months)" />
+            <input class="field" name="actionBias" placeholder="Action bias (e.g. buy weakness)" />
+          </div>
+          <textarea class="textarea" name="disconfirmSignals" placeholder="What would prove this belief wrong?"></textarea>
           <div class="form-actions">
-            <button class="button" type="submit">Add belief</button>
+            <button class="button" type="submit">Add belief profile</button>
           </div>
         </form>
       </section>
@@ -838,14 +1030,41 @@ function renderInbox() {
       <section class="panel">
         <div class="panel-header">
           <div>
-            <div class="panel-label">Curated articles</div>
-            <h2 class="panel-title">Real-time article feed</h2>
+            <div class="panel-label">AI suggestions</div>
+            <h2 class="panel-title">What the inbox thinks you should do next</h2>
+          </div>
+        </div>
+        <div class="list suggestion-list">
+          ${suggestions.map((suggestion) => `
+            <article class="suggestion-card">
+              <div class="list-row">
+                <div>
+                  <div class="list-title">${suggestion.label}</div>
+                  <div class="meta">${suggestion.asset?.symbol || suggestion.theme?.title || 'Cross-portfolio'} · ${titleCase(suggestion.priority)}</div>
+                </div>
+                <span class="badge ${priorityClass(suggestion.priority)}">${titleCase(suggestion.alignment)}</span>
+              </div>
+              <div class="item-stack">
+                <div class="item-text">${suggestion.summary}</div>
+                <div class="detail-copy">${suggestion.action}</div>
+              </div>
+            </article>
+          `).join('') || '<div class="empty-state">Suggestions appear once the inbox has signals to rank.</div>'}
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-label">Real-time market updates</div>
+            <h2 class="panel-title">Signal inbox</h2>
           </div>
         </div>
         <div class="list">
           ${items.map((item) => {
             const event = item.event || {};
             const beliefTags = tagsForInboxItem(item);
+            const move = event.marketContext?.changePercent;
             return `
               <article class="list-item">
                 <div class="list-row">
@@ -853,7 +1072,10 @@ function renderInbox() {
                     <div class="list-title">${event.title || 'Untitled article'}</div>
                     <div class="meta">${formatDate(item.createdAt)} · ${titleCase(item.priority)}</div>
                   </div>
-                  <span class="badge ${priorityClass(item.priority)}">${titleCase(item.priority)}</span>
+                  <div class="stacked-badges">
+                    ${move != null ? `<span class="trend-pill ${Number(move) >= 0 ? 'positive' : 'negative'}">${formatPercent(move)}</span>` : ''}
+                    <span class="badge ${priorityClass(item.priority)}">${titleCase(item.priority)}</span>
+                  </div>
                 </div>
                 <div class="item-stack">
                   <div class="item-text">${event.factualSummary || item.reason || 'No summary recorded yet.'}</div>
@@ -869,6 +1091,51 @@ function renderInbox() {
               </article>
             `;
           }).join('') || '<div class="empty-state">No articles match this filter yet.</div>'}
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-label">Daily report</div>
+            <h2 class="panel-title">Trending stocks and news basket</h2>
+            <p class="panel-copy">${dailyReport.summary || 'A daily report will appear here.'}</p>
+          </div>
+        </div>
+        <div class="report-card">
+          <div class="meta">Generated ${formatDate(dailyReport.generatedAt)} · ${dailyReport.cadence || 'Daily cadence'}</div>
+          <div class="section-stack">
+            <div>
+              <div class="list-title">Trending stocks</div>
+              <div class="list compact-list">
+                ${(dailyReport.trendingStocks || []).map((stock) => `
+                  <article class="report-row">
+                    <div>
+                      <div class="list-title">${stock.symbol || stock.name}</div>
+                      <div class="meta">${stock.linkedBeliefs?.join(' · ') || 'General coverage'}</div>
+                      <div class="detail-copy">${stock.rationale || ''}</div>
+                    </div>
+                    <div class="report-metric ${Number(stock.changePct1d) >= 0 ? 'positive' : 'negative'}">${formatPercent(stock.changePct1d)}</div>
+                  </article>
+                `).join('') || '<div class="empty-state">No trending names yet.</div>'}
+              </div>
+            </div>
+            <div>
+              <div class="list-title">News basket</div>
+              <div class="list compact-list news-basket">
+                ${(dailyReport.newsBasket || []).map((article) => `
+                  <article class="report-row report-row--news">
+                    <div>
+                      <div class="list-title">${article.title}</div>
+                      <div class="meta">${article.source || 'Open Advisor'} · ${formatDate(article.publishedAt)}</div>
+                      <div class="item-text">${article.summary || ''}</div>
+                      <div class="detail-copy">${article.aiAngle || ''}</div>
+                    </div>
+                  </article>
+                `).join('') || '<div class="empty-state">No curated news yet.</div>'}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -1199,7 +1466,8 @@ function bindActions() {
       const form = new FormData(beliefForm);
       const body = Object.fromEntries(form.entries());
       body.assets = parseSymbols(body.symbols);
-      await post('/v1/themes', body);
+      body.preferredEvidence = [];
+      await post('/v1/inbox-beliefs', body);
       beliefForm.reset();
       await refreshState();
     };

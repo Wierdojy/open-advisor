@@ -13,6 +13,6 @@
     "dev:web": "node apps/web/server.js",
     "dev:api": "node services/api/server.js",
     "reset": "node scripts/reset-data.js",
-    "test": "node scripts/smoke-test.js && node scripts/api-test.js"
+    "test": "node scripts/smoke-test.js && node scripts/api-test.js && node scripts/runtime-test.js"
   }
 }

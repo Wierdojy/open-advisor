@@ -6,8 +6,10 @@ Initial API for the day-one MVP of a **thesis-driven market copilot**.
 The API is centered on the core objects and the simplest coherent UX:
 - portfolio context
 - thesis tracking
+- belief-driven inbox curation
 - catalyst calendar
 - alerts
+- realtime signal inbox
 - digest
 - research sweeps
 
@@ -60,6 +62,24 @@ The API is centered on the core objects and the simplest coherent UX:
 ### Digest
 - `GET /v1/digest/today`
 - `GET /v1/digest/:date`
+
+### Inbox / realtime signals
+- `GET /v1/inbox`
+- `GET /v1/inbox-beliefs`
+- `POST /v1/inbox-beliefs`
+- `GET /v1/daily-report`
+- `GET /v1/inbox-feed?q=&filter=&category=&limit=&cursor=`
+- `GET /v1/stream`
+- `POST /v1/signals/ingest`
+- `POST /v1/market-signals/ingest`
+- `POST /v1/inbox-items/:id/seen`
+- `POST /v1/inbox-items/:id/archive`
+
+### Portfolio analytics
+- `GET /v1/portfolio/analytics?benchmark=nasdaq-100`
+
+### Chat analysis
+- `POST /v1/chat/analysis`
 
 ### Research runs
 - `GET /v1/research-runs`
@@ -115,7 +135,7 @@ Start with authenticated single-user or dev-user mode plus mocked or thin real d
 **portfolio + thesis context -> catalysts -> digest/alerts -> targeted research**
 
 ## Explicit non-goals for v1 API
-- inbox state machine
+- complex workflow inbox state machine
 - workflow/task orchestration
 - trading / execution APIs
 - multi-user collaboration

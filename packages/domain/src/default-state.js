@@ -7,7 +7,20 @@ module.exports = {
     researchPolicy: {
       urgent: 'fast_enrichment_only',
       digest: 'deeper_research_allowed',
-      userQuestions: 'full_research_mode'
+      userQuestions: 'full_research_mode',
+      dailyReportSchedule: '08:00 PT',
+      inboxBeliefs: [
+        {
+          id: 'belief_profile_1',
+          themeId: 'theme_1',
+          stance: 'bullish',
+          conviction: 'high',
+          timeHorizon: '6-18 months',
+          actionBias: 'buy_quality_on_weakness',
+          preferredEvidence: ['earnings', 'capex', 'datacenter_demand'],
+          disconfirmSignals: 'Cooling order slowdown, utility capex cuts, or hyperscaler pullbacks.'
+        }
+      ]
     }
   },
   sourceAdapters: [
@@ -40,7 +53,8 @@ module.exports = {
     { id: 'asset_nvda', symbol: 'NVDA', name: 'NVIDIA', assetType: 'equity' },
     { id: 'asset_vrt', symbol: 'VRT', name: 'Vertiv', assetType: 'equity' },
     { id: 'asset_btc', symbol: 'BTC', name: 'Bitcoin', assetType: 'crypto' },
-    { id: 'asset_xlu', symbol: 'XLU', name: 'Utilities Select Sector SPDR Fund', assetType: 'etf' }
+    { id: 'asset_xlu', symbol: 'XLU', name: 'Utilities Select Sector SPDR Fund', assetType: 'etf' },
+    { id: 'asset_avgo', symbol: 'AVGO', name: 'Broadcom', assetType: 'equity' }
   ],
   holdings: [
     { id: 'holding_1', assetId: 'asset_nvda', quantity: 25, sourceType: 'broker_sync', costBasis: 822.15 },
@@ -94,6 +108,45 @@ module.exports = {
       sourceLabel: 'Sector news monitor',
       sourceTier: 'tier_2',
       importance: 'high',
+      truthStatus: 'confirmed',
+      marketContext: {
+        changePercent: 2.8,
+        direction: 'up'
+      }
+    },
+    {
+      id: 'event_3',
+      eventType: 'market_change',
+      title: 'VRT extends breakout after cooling order commentary',
+      factualSummary: 'Vertiv moved higher after commentary pointed to resilient cooling demand tied to AI datacenter buildouts.',
+      recordedAt: '2026-05-20T15:20:00Z',
+      scheduledFor: '2026-05-20T15:20:00Z',
+      assetId: 'asset_vrt',
+      themeId: 'theme_1',
+      sourceAdapterId: 'adapter_sector_news',
+      sourceLabel: 'Live market feed',
+      sourceTier: 'tier_1',
+      importance: 'high',
+      truthStatus: 'developing',
+      marketContext: {
+        changePercent: 5.6,
+        price: 97.34,
+        direction: 'up'
+      }
+    },
+    {
+      id: 'event_4',
+      eventType: 'news',
+      title: 'Semiconductor basket leadership broadens beyond mega-cap AI names',
+      factualSummary: 'A cluster of AI-adjacent semiconductor suppliers outperformed as investors rotated into second-derivative beneficiaries.',
+      recordedAt: '2026-05-20T16:10:00Z',
+      scheduledFor: '2026-05-20T16:10:00Z',
+      assetId: 'asset_avgo',
+      themeId: 'theme_1',
+      sourceAdapterId: 'adapter_sector_news',
+      sourceLabel: 'News basket monitor',
+      sourceTier: 'tier_2',
+      importance: 'normal',
       truthStatus: 'confirmed'
     }
   ],
@@ -117,6 +170,30 @@ module.exports = {
       nextStep: 'Check whether the capex signal broadens beyond one operator.',
       createdAt: '2026-05-20T14:02:00Z',
       deliveryKind: 'in_app'
+    },
+    {
+      id: 'inbox_3',
+      eventId: 'event_3',
+      state: 'new',
+      priority: 'high',
+      score: 62,
+      reason: 'The move reinforces your AI infrastructure belief and touches a watchlist name.',
+      nextStep: 'Decide whether this confirms durable cooling demand or just momentum chasing.',
+      createdAt: '2026-05-20T15:21:00Z',
+      deliveryKind: 'in_app',
+      suggestionType: 'thesis_check'
+    },
+    {
+      id: 'inbox_4',
+      eventId: 'event_4',
+      state: 'new',
+      priority: 'normal',
+      score: 35,
+      reason: 'Useful context for the daily report because leadership is broadening beyond a single AI winner.',
+      nextStep: 'Roll into the daily report unless another confirming signal hits the same theme.',
+      createdAt: '2026-05-20T16:12:00Z',
+      deliveryKind: 'in_app',
+      suggestionType: 'monitor'
     }
   ],
   reminders: [

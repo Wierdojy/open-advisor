@@ -2,7 +2,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const port = process.env.PORT || 3000;
+const port = process.env.OPEN_ADVISOR_WEB_PORT || process.env.PORT || 3000;
 const publicDir = path.join(__dirname, 'public');
 
 const contentTypes = {

@@ -1,8 +1,10 @@
 const http = require('node:http');
 const { URL } = require('node:url');
-const { store, derive } = require('../../packages/domain');
+const { store, derive, analytics, chatAnalysis } = require('../../packages/domain');
+const { ingestSignal } = require('./signal-service');
 
-const port = process.env.PORT || 3001;
+const port = process.env.OPEN_ADVISOR_API_PORT || process.env.PORT || 3001;
+const sseClients = new Set();
 
 function send(res, status, payload) {
   res.writeHead(status, {
@@ -14,6 +16,10 @@ function send(res, status, payload) {
   res.end(JSON.stringify(payload, null, 2));
 }
 
+function badRequest(res, message, details) {
+  return send(res, 400, { error: message, details: details || null });
+}
+
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -23,6 +29,7 @@ function parseBody(req) {
       try {
         resolve(JSON.parse(body));
       } catch (error) {
+        error.statusCode = 400;
         reject(error);
       }
     });
@@ -31,6 +38,32 @@ function parseBody(req) {
 
 function notFound(res, pathname) {
   return send(res, 404, { error: 'Not found', path: pathname });
+}
+
+function sendSse(res, event, payload) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+function realtimePayload(state, meta = {}) {
+  const bootstrap = sendBootstrapPayload(state);
+  return {
+    type: meta.type || 'bootstrap',
+    meta,
+    inbox: bootstrap.inbox,
+    digest: bootstrap.digest,
+    calendar: bootstrap.calendar,
+    auditTrail: bootstrap.auditTrail,
+    deliveryQueue: (state.deliveryQueue || []).slice(0, 20)
+  };
+}
+
+function broadcast(state, meta = {}) {
+  if (!sseClients.size) return;
+  const payload = realtimePayload(state, meta);
+  for (const client of sseClients) {
+    sendSse(client, meta.event || 'update', payload);
+  }
 }
 
 function nowIso() {
@@ -142,6 +175,38 @@ function createTheme(state, body) {
   return theme;
 }
 
+function ensureResearchPolicy(state) {
+  state.user = state.user || { id: store.makeId('user'), name: 'Open Advisor', timezone: 'UTC', digestCadence: 'daily', researchPolicy: {} };
+  state.user.researchPolicy = state.user.researchPolicy || {};
+  state.user.researchPolicy.inboxBeliefs = state.user.researchPolicy.inboxBeliefs || [];
+  return state.user.researchPolicy;
+}
+
+function createInboxBelief(state, body) {
+  const theme = createTheme(state, {
+    title: body.title,
+    summary: body.summary,
+    hypothesis: body.hypothesis,
+    monitoringPlan: body.monitoringPlan,
+    assets: body.assets || []
+  });
+
+  const researchPolicy = ensureResearchPolicy(state);
+  const profile = {
+    id: store.makeId('belief_profile'),
+    themeId: theme.id,
+    stance: body.stance || 'balanced',
+    conviction: body.conviction || 'medium',
+    timeHorizon: body.timeHorizon || '3-12 months',
+    actionBias: body.actionBias || 'monitor',
+    preferredEvidence: Array.isArray(body.preferredEvidence) ? body.preferredEvidence : [],
+    disconfirmSignals: body.disconfirmSignals || ''
+  };
+  researchPolicy.inboxBeliefs.unshift(profile);
+  logAudit(state, 'belief_profile_created', 'belief_profile', profile.id, `Created inbox belief profile for ${theme.title}.`);
+  return { theme, profile };
+}
+
 function createInboxItem(state, body) {
   const inboxItem = {
     id: store.makeId('inbox'),
@@ -170,6 +235,80 @@ function createReminder(state, body) {
   state.reminders.push(reminder);
   logAudit(state, 'reminder_created', 'reminder', reminder.id, `Created reminder ${reminder.title}.`);
   return reminder;
+}
+
+function upsertSourceAdapter(state, body) {
+  state.sourceAdapters = state.sourceAdapters || [];
+  const adapterId = body.id || body.sourceAdapterId || null;
+  let adapter = state.sourceAdapters.find((item) => item.id === adapterId || (body.name && item.name === body.name));
+
+  if (!adapter) {
+    adapter = {
+      id: adapterId || store.makeId('adapter'),
+      name: body.name || 'Unnamed adapter',
+      tier: body.tier || 'tier_3',
+      status: body.status || 'healthy',
+      lastSyncedAt: body.lastSyncedAt || nowIso(),
+      coverage: body.coverage || 'custom'
+    };
+    state.sourceAdapters.unshift(adapter);
+    logAudit(state, 'source_adapter_created', 'source_adapter', adapter.id, `Created source adapter ${adapter.name}.`);
+    return { adapter, created: true };
+  }
+
+  adapter.name = body.name || adapter.name;
+  adapter.tier = body.tier || adapter.tier || 'tier_3';
+  adapter.status = body.status || adapter.status || 'healthy';
+  adapter.lastSyncedAt = body.lastSyncedAt || nowIso();
+  adapter.coverage = body.coverage || adapter.coverage || 'custom';
+  if (body.notes != null) adapter.notes = body.notes;
+  logAudit(state, 'source_adapter_updated', 'source_adapter', adapter.id, `Updated source adapter ${adapter.name}.`);
+  return { adapter, created: false };
+}
+
+function markDelivery(state, deliveryId, body) {
+  const delivery = (state.deliveryQueue || []).find((item) => item.id === deliveryId);
+  if (!delivery) return null;
+  delivery.status = body.status || 'delivered';
+  delivery.deliveredAt = body.deliveredAt || nowIso();
+  if (body.channel) delivery.channel = body.channel;
+  if (body.reason) delivery.reason = body.reason;
+  logAudit(state, 'delivery_updated', 'delivery', delivery.id, `Marked delivery ${delivery.status}.`);
+  return delivery;
+}
+
+function validateSignalPayload(body) {
+  const errors = [];
+  if (!body || typeof body !== 'object') errors.push('Payload must be a JSON object.');
+  if (!body?.title) errors.push('title is required.');
+  if (!body?.eventType && !body?.type) errors.push('eventType is required.');
+  if (!body?.assetId && !body?.symbol && !body?.name) errors.push('One of assetId, symbol, or name is required.');
+  return errors;
+}
+
+function validateSourceAdapterPayload(body) {
+  const errors = [];
+  if (!body || typeof body !== 'object') errors.push('Payload must be a JSON object.');
+  if (!body?.id && !body?.name) errors.push('id or name is required.');
+  return errors;
+}
+
+function validateChatAnalysisPayload(body) {
+  const errors = [];
+  if (!body || typeof body !== 'object') errors.push('Payload must be a JSON object.');
+  if (!body?.message && !body?.question) errors.push('message or question is required.');
+  return errors;
+}
+
+function validateInboxBeliefPayload(body) {
+  const errors = [];
+  if (!body || typeof body !== 'object') errors.push('Payload must be a JSON object.');
+  if (!body?.title) errors.push('title is required.');
+  return errors;
+}
+
+function currentState() {
+  return store.loadState();
 }
 
 function createCanonicalEvent(state, body) {
@@ -361,16 +500,72 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (pathname === '/health') return send(res, 200, { ok: true, service: 'open-advisor-api' });
-    if (pathname === '/v1/bootstrap' && req.method === 'GET') return send(res, 200, sendBootstrapPayload(store.loadState()));
-    if (pathname === '/v1/digest/today' && req.method === 'GET') return send(res, 200, derive.buildDigest(store.loadState()));
-    if ((pathname === '/v1/inbox' || pathname === '/v1/inbox-items') && req.method === 'GET') return send(res, 200, derive.buildInbox(store.loadState()));
-    if ((pathname === '/v1/calendar' || pathname === '/v1/events' || pathname === '/v1/canonical-events' || pathname === '/v1/catalysts') && req.method === 'GET') return send(res, 200, derive.buildCalendar(store.loadState()));
-    if ((pathname === '/v1/audit-log' || pathname === '/v1/audit') && req.method === 'GET') return send(res, 200, derive.buildAuditTrail(store.loadState()));
-    if ((pathname === '/v1/notes') && req.method === 'GET') return send(res, 200, store.loadState().notes);
-    if ((pathname === '/v1/research-reports') && req.method === 'GET') return send(res, 200, store.loadState().researchReports);
-    if ((pathname === '/v1/research-jobs' || pathname === '/v1/research-runs') && req.method === 'GET') return send(res, 200, derive.buildResearchWorkspace(store.loadState()));
+    if (pathname === '/health/deep') return send(res, 200, { ...store.getHealth(), service: 'open-advisor-api', sseClients: sseClients.size });
+    if (pathname === '/v1/bootstrap' && req.method === 'GET') return send(res, 200, sendBootstrapPayload(currentState()));
+    if ((pathname === '/v1/stream' || pathname === '/v1/events/stream') && req.method === 'GET') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.write('retry: 2000\n\n');
+      sseClients.add(res);
+      sendSse(res, 'connected', { ok: true, connectedAt: nowIso() });
+      sendSse(res, 'bootstrap', realtimePayload(currentState(), { type: 'bootstrap' }));
+      const keepAlive = setInterval(() => {
+        res.write(': keepalive\n\n');
+      }, 15000);
+      req.on('close', () => {
+        clearInterval(keepAlive);
+        sseClients.delete(res);
+      });
+      return;
+    }
+    if (pathname === '/v1/digest/today' && req.method === 'GET') return send(res, 200, derive.buildDigest(currentState()));
+    if ((pathname === '/v1/inbox' || pathname === '/v1/inbox-items') && req.method === 'GET') return send(res, 200, derive.buildInbox(currentState()));
+    if (pathname === '/v1/inbox-feed' && req.method === 'GET') return send(res, 200, analytics.buildInboxFeed(sendBootstrapPayload(currentState()), Object.fromEntries(url.searchParams.entries())));
+    if ((pathname === '/v1/calendar' || pathname === '/v1/events' || pathname === '/v1/canonical-events' || pathname === '/v1/catalysts') && req.method === 'GET') return send(res, 200, derive.buildCalendar(currentState()));
+    if ((pathname === '/v1/audit-log' || pathname === '/v1/audit') && req.method === 'GET') return send(res, 200, derive.buildAuditTrail(currentState()));
+    if ((pathname === '/v1/source-health') && req.method === 'GET') return send(res, 200, derive.buildSourceHealth(currentState()));
+    if ((pathname === '/v1/daily-report' || pathname === '/v1/daily-report/today') && req.method === 'GET') return send(res, 200, derive.buildDailyReport(currentState()));
+    if ((pathname === '/v1/delivery-queue') && req.method === 'GET') return send(res, 200, currentState().deliveryQueue || []);
+    if ((pathname === '/v1/notes') && req.method === 'GET') return send(res, 200, currentState().notes);
+    if ((pathname === '/v1/research-reports') && req.method === 'GET') return send(res, 200, currentState().researchReports);
+    if ((pathname === '/v1/research-jobs' || pathname === '/v1/research-runs') && req.method === 'GET') return send(res, 200, derive.buildResearchWorkspace(currentState()));
+    if ((pathname === '/v1/inbox-beliefs') && req.method === 'GET') return send(res, 200, derive.buildBeliefProfiles(currentState()));
+    if (pathname === '/v1/portfolio/analytics' && req.method === 'GET') return send(res, 200, analytics.buildPortfolioAnalytics(currentState(), url.searchParams.get('benchmark') || 'nasdaq-100'));
+    if (pathname === '/v1/chat/analysis' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const errors = validateChatAnalysisPayload(body);
+      if (errors.length) return badRequest(res, 'Invalid chat analysis payload', errors);
+      return send(res, 200, chatAnalysis.buildChatAnalysis(currentState(), body));
+    }
 
     if (pathname === '/v1/reset' && req.method === 'POST') return send(res, 200, sendBootstrapPayload(store.resetState()));
+
+    if (pathname === '/v1/source-adapters') {
+      if (req.method === 'GET') return send(res, 200, store.loadState().sourceAdapters || []);
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        const errors = validateSourceAdapterPayload(body);
+        if (errors.length) return badRequest(res, 'Invalid source adapter payload', errors);
+        let result;
+        const state = store.update((draft) => {
+          result = upsertSourceAdapter(draft, body);
+          return draft;
+        });
+        broadcast(state, { event: 'source_health_update', type: result.created ? 'source_adapter_created' : 'source_adapter_updated', sourceAdapterId: result.adapter.id });
+        return send(res, result.created ? 201 : 200, { ok: true, adapter: result.adapter, bootstrap: sendBootstrapPayload(state) });
+      }
+    }
+
+    const sourceAdapterMatch = pathname.match(/^\/v1\/source-adapters\/([^/]+)$/);
+    if (sourceAdapterMatch && req.method === 'GET') {
+      const sourceAdapter = (store.loadState().sourceAdapters || []).find((item) => item.id === sourceAdapterMatch[1]);
+      if (!sourceAdapter) return send(res, 404, { error: 'Source adapter not found', id: sourceAdapterMatch[1] });
+      return send(res, 200, sourceAdapter);
+    }
 
     if (pathname === '/v1/holdings') {
       if (req.method === 'GET') return send(res, 200, store.loadState().holdings);
@@ -380,6 +575,7 @@ const server = http.createServer(async (req, res) => {
           createHolding(draft, body);
           return draft;
         });
+        broadcast(state, { event: 'portfolio_update', type: 'holding_created' });
         return send(res, 201, sendBootstrapPayload(state));
       }
     }
@@ -392,6 +588,7 @@ const server = http.createServer(async (req, res) => {
           createWatchlist(draft, body);
           return draft;
         });
+        broadcast(state, { event: 'portfolio_update', type: 'watchlist_created' });
         return send(res, 201, sendBootstrapPayload(state));
       }
     }
@@ -404,7 +601,113 @@ const server = http.createServer(async (req, res) => {
           createTheme(draft, body);
           return draft;
         });
+        broadcast(state, { event: 'thesis_update', type: 'theme_created' });
         return send(res, 201, sendBootstrapPayload(state));
+      }
+    }
+
+    if (pathname === '/v1/inbox-beliefs' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const errors = validateInboxBeliefPayload(body);
+      if (errors.length) return badRequest(res, 'Invalid inbox belief payload', errors);
+      let created;
+      const state = store.update((draft) => {
+        created = createInboxBelief(draft, body);
+        return draft;
+      });
+      broadcast(state, { event: 'thesis_update', type: 'belief_profile_created', beliefProfileId: created.profile.id, themeId: created.theme.id });
+      return send(res, 201, {
+        ok: true,
+        theme: created.theme,
+        beliefProfile: created.profile,
+        bootstrap: sendBootstrapPayload(state)
+      });
+    }
+
+    if (pathname === '/v1/signals/ingest' || pathname === '/v1/market-signals/ingest') {
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        const errors = validateSignalPayload(body);
+        if (errors.length) return badRequest(res, 'Invalid signal payload', errors);
+        let ingestionResult;
+        const state = store.update((draft) => {
+          ingestionResult = ingestSignal(draft, body, {
+            nowIso,
+            makeId: store.makeId,
+            ensureAsset
+          });
+          logAudit(
+            draft,
+            ingestionResult.mode === 'merged' ? 'signal_merged' : 'signal_ingested',
+            'event',
+            ingestionResult.event.id,
+            `${ingestionResult.mode === 'merged' ? 'Updated' : 'Created'} realtime signal ${ingestionResult.event.title}.`
+          );
+          if (ingestionResult.reminderCreated && ingestionResult.reminder) {
+            logAudit(draft, 'reminder_created', 'reminder', ingestionResult.reminder.id, `Created reminder ${ingestionResult.reminder.title}.`);
+          }
+          return draft;
+        });
+        broadcast(state, {
+          event: 'inbox_update',
+          type: ingestionResult.mode === 'merged' ? 'signal_updated' : 'signal_ingested',
+          eventId: ingestionResult.event.id,
+          inboxItemId: ingestionResult.inboxItem.id,
+          priority: ingestionResult.priority,
+          suggestionType: ingestionResult.suggestionType
+        });
+        return send(res, ingestionResult.mode === 'merged' ? 200 : 201, {
+          ok: true,
+          ...ingestionResult,
+          bootstrap: sendBootstrapPayload(state)
+        });
+      }
+    }
+
+    if (pathname === '/v1/signals/ingest/batch' || pathname === '/v1/market-signals/ingest/batch') {
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        const items = Array.isArray(body) ? body : Array.isArray(body.items) ? body.items : [];
+        if (!items.length) return badRequest(res, 'Batch payload must include at least one signal item.');
+        const invalid = items.map((item, index) => ({ index, errors: validateSignalPayload(item) })).filter((item) => item.errors.length);
+        if (invalid.length) return badRequest(res, 'Invalid batch signal payload', invalid);
+        const results = [];
+        const state = store.update((draft) => {
+          for (const item of items) {
+            const result = ingestSignal(draft, item, {
+              nowIso,
+              makeId: store.makeId,
+              ensureAsset
+            });
+            results.push(result);
+            logAudit(
+              draft,
+              result.mode === 'merged' ? 'signal_merged' : 'signal_ingested',
+              'event',
+              result.event.id,
+              `${result.mode === 'merged' ? 'Updated' : 'Created'} realtime signal ${result.event.title}.`
+            );
+            if (result.reminderCreated && result.reminder) {
+              logAudit(draft, 'reminder_created', 'reminder', result.reminder.id, `Created reminder ${result.reminder.title}.`);
+            }
+          }
+          return draft;
+        });
+        broadcast(state, {
+          event: 'inbox_batch_update',
+          type: 'signal_batch_ingested',
+          count: results.length,
+          created: results.filter((item) => item.mode === 'created').length,
+          merged: results.filter((item) => item.mode === 'merged').length
+        });
+        return send(res, 201, {
+          ok: true,
+          count: results.length,
+          created: results.filter((item) => item.mode === 'created').length,
+          merged: results.filter((item) => item.mode === 'merged').length,
+          results,
+          bootstrap: sendBootstrapPayload(state)
+        });
       }
     }
 
@@ -415,8 +718,17 @@ const server = http.createServer(async (req, res) => {
           createCanonicalEvent(draft, body);
           return draft;
         });
+        broadcast(state, { event: 'inbox_update', type: 'event_created' });
         return send(res, 201, sendBootstrapPayload(state));
       }
+    }
+
+    const eventByIdMatch = pathname.match(/^\/v1\/(events|canonical-events|catalysts)\/([^/]+)$/);
+    if (eventByIdMatch && req.method === 'GET') {
+      const eventId = eventByIdMatch[2];
+      const event = derive.buildCalendar(store.loadState()).find((item) => item.id === eventId);
+      if (!event) return send(res, 404, { error: 'Event not found', id: eventId });
+      return send(res, 200, event);
     }
 
     if (pathname === '/v1/reminders' || pathname === '/v1/alerts') {
@@ -427,6 +739,7 @@ const server = http.createServer(async (req, res) => {
           createReminder(draft, body);
           return draft;
         });
+        broadcast(state, { event: 'reminder_update', type: 'reminder_created' });
         return send(res, 201, sendBootstrapPayload(state));
       }
     }
@@ -437,6 +750,7 @@ const server = http.createServer(async (req, res) => {
         createNote(draft, body);
         return draft;
       });
+      broadcast(state, { event: 'note_update', type: 'note_created' });
       return send(res, 201, sendBootstrapPayload(state));
     }
 
@@ -447,6 +761,7 @@ const server = http.createServer(async (req, res) => {
           createResearchJob(draft, body);
           return draft;
         });
+        broadcast(state, { event: 'research_update', type: 'research_job_created' });
         return send(res, 201, sendBootstrapPayload(state));
       }
     }
@@ -491,6 +806,7 @@ const server = http.createServer(async (req, res) => {
         logAudit(draft, 'resource_deleted', singularMap[resource], resourceId, `Deleted ${singularMap[resource]} ${resourceId}.`);
         return draft;
       });
+      broadcast(state, { event: 'resource_deleted', type: singularMap[resource], resourceId });
       return send(res, 200, sendBootstrapPayload(state));
     }
 
@@ -503,7 +819,29 @@ const server = http.createServer(async (req, res) => {
         logAudit(draft, 'inbox_state_changed', 'inbox_item', inboxId, `Inbox item marked ${action}.`);
         return draft;
       });
+      broadcast(state, { event: 'inbox_update', type: `inbox_${action}`, inboxItemId: inboxId });
       return send(res, 200, sendBootstrapPayload(state));
+    }
+
+    const inboxItemMatch = pathname.match(/^\/v1\/inbox-items\/([^/]+)$/);
+    if (inboxItemMatch && req.method === 'GET') {
+      const inboxItem = derive.buildInbox(store.loadState()).find((item) => item.id === inboxItemMatch[1]);
+      if (!inboxItem) return send(res, 404, { error: 'Inbox item not found', id: inboxItemMatch[1] });
+      return send(res, 200, inboxItem);
+    }
+
+    const deliveryStateMatch = pathname.match(/^\/v1\/delivery-queue\/([^/]+)\/(delivered|failed|cancelled)$/);
+    if (deliveryStateMatch && req.method === 'POST') {
+      const [, deliveryId, status] = deliveryStateMatch;
+      const body = await parseBody(req);
+      let delivery;
+      const state = store.update((draft) => {
+        delivery = markDelivery(draft, deliveryId, { ...body, status });
+        return draft;
+      });
+      if (!delivery) return send(res, 404, { error: 'Delivery not found', id: deliveryId });
+      broadcast(state, { event: 'delivery_update', type: `delivery_${status}`, deliveryId, status });
+      return send(res, 200, { ok: true, delivery, bootstrap: sendBootstrapPayload(state) });
     }
 
     const reminderDoneMatch = pathname.match(/^\/v1\/reminders\/([^/]+)\/done$/);
@@ -515,7 +853,16 @@ const server = http.createServer(async (req, res) => {
         logAudit(draft, 'reminder_completed', 'reminder', reminderId, `Reminder marked done.`);
         return draft;
       });
+      broadcast(state, { event: 'reminder_update', type: 'reminder_done', reminderId });
       return send(res, 200, sendBootstrapPayload(state));
+    }
+
+    const reminderByIdMatch = pathname.match(/^\/v1\/(reminders|alerts)\/([^/]+)$/);
+    if (reminderByIdMatch && req.method === 'GET') {
+      const reminderId = reminderByIdMatch[2];
+      const reminder = (store.loadState().reminders || []).find((item) => item.id === reminderId);
+      if (!reminder) return send(res, 404, { error: 'Reminder not found', id: reminderId });
+      return send(res, 200, reminder);
     }
 
     const reminderSnoozeMatch = pathname.match(/^\/v1\/reminders\/([^/]+)\/snooze$/);
@@ -531,6 +878,7 @@ const server = http.createServer(async (req, res) => {
         logAudit(draft, 'reminder_snoozed', 'reminder', reminderId, `Reminder snoozed.`);
         return draft;
       });
+      broadcast(state, { event: 'reminder_update', type: 'reminder_snoozed', reminderId });
       return send(res, 200, sendBootstrapPayload(state));
     }
 
@@ -543,6 +891,7 @@ const server = http.createServer(async (req, res) => {
         logAudit(draft, 'legacy_alert_seen', 'reminder', reminderId, `Legacy alert endpoint marked reminder done.`);
         return draft;
       });
+      broadcast(state, { event: 'reminder_update', type: 'legacy_alert_seen', reminderId });
       return send(res, 200, sendBootstrapPayload(state));
     }
 
@@ -559,12 +908,13 @@ const server = http.createServer(async (req, res) => {
         logAudit(draft, 'legacy_alert_snoozed', 'reminder', reminderId, `Legacy alert endpoint snoozed reminder.`);
         return draft;
       });
+      broadcast(state, { event: 'reminder_update', type: 'legacy_alert_snoozed', reminderId });
       return send(res, 200, sendBootstrapPayload(state));
     }
 
     return notFound(res, pathname);
   } catch (error) {
-    return send(res, 500, { error: error.message });
+    return send(res, error.statusCode || 500, { error: error.message });
   }
 });
 

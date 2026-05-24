@@ -1,3 +1,5 @@
 node_modules/
 dist-pages/
 data/app-state.json
+data/*.sqlite
+data/*.sqlite-*
